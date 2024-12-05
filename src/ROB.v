@@ -1,0 +1,85 @@
+`include "const.v"
+
+module ReorderBuffer #(
+        parameter ROB_SIZE_BIT = `ROB_WIDTH_BIT
+    ) (
+        input  wire                 clk_in,			// system clock signal
+        input  wire                 rst_in,			// reset signal
+        input  wire					rdy_in,			// ready signal, pause cpu when low
+        input  wire                 clear,
+
+
+        // from Decoder: ins info
+        input wire inst_valid,
+        input wire inst_ready,
+        input wire [4 : 0] ins_rd, 
+
+
+
+        // from RS execute end.
+        input wire rs_is_set,
+        input wire [ROB_SIZE_BIT - 1 : 0] rs_set_id,
+        input wire [31 : 0] rs_set_val,
+        // from LSB execute end
+        input wire lsb_is_set,
+        input wire [ROB_SIZE_BIT - 1 : 0] lsb_set_id,
+        input wire [31 : 0] lsb_set_val,
+        // to Decoder 
+
+        // to RegFile commit.
+        output wire [ROB_SIZE_BIT - 1 : 0] write_reg_id,
+        output wire [31 : 0] write_val,
+        output wire [`ROB_WIDTH_BIT - 1: 0] write_ROB_id,
+        // to RegFile new tail.
+        output wire [4: 0] new_reg_id,
+        output wire [`ROB_WIDTH_BIT - 1: 0] new_ROB_id,
+        
+        output reg clear_flag,
+        output reg [31:0] pc_fact
+    );
+    localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
+
+    reg ready[0 : ROB_SIZE - 1];
+    reg busy[0 : ROB_SIZE - 1];
+
+    reg [31 : 0] value[0 : ROB_SIZE - 1];
+    reg [4 : 0] rd[0 : ROB_SIZE - 1];
+    reg [`ROB_TYPE - 1 : 0] insType[0 : ROB_SIZE - 1]; // 0: NOP, 1: rs-ALU, 2: lsb-MEM, 3: rs-BRANCH
+    reg [31 : 0] insAddr[0 : ROB_SIZE - 1];
+    reg [31 : 0] jpAddr[0 : ROB_SIZE - 1];
+
+    reg [`ROB_WIDTH_BIT - 1 : 0] head, tail;
+    integer i;
+    always @(posedge clk_in) begin
+        if (rst_in || (clear && rdy_in)) begin
+            clear_flag <= 0;
+            head <= 0;
+            tail <= 0;
+            pc_fact <= 0;
+            for (i = 0; i < ROB_SIZE; i = i + 1) begin
+                ready[i] <= 0;
+                busy[i] <= 0;
+                value[i] <= 0;
+                rd[i] <= 0;
+                insType[i] <= 0;
+                insAddr[i] <= 0;
+                jpAddr[i] <= 0;
+            end
+        end else if (!rdy_in) begin
+        end else begin
+            // work
+            if(rs_is_set) begin
+                ready[rs_set_id] <= 1;
+                value[rs_set_id] <= rs_set_val;
+            end 
+            if(lsb_is_set) begin
+                ready[lsb_set_id] <= 1;
+                value[lsb_set_id] <= lsb_set_val;
+            end
+            // new inst , push tail
+            if(inst_valid) begin
+                
+            end
+        end
+    end
+endmodule
