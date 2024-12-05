@@ -12,9 +12,11 @@ module ReorderBuffer #(
         // from Decoder: ins info
         input wire inst_valid,
         input wire inst_ready,
-        input wire [4 : 0] ins_rd, 
-
-
+        input wire [31 : 0] ins_value,
+        input wire [4 : 0] ins_rd,
+        input wire [`ROB_TYPE - 1 : 0] ins_Type, // 0: NOP, 1: rs-ALU, 2: lsb-MEM, 3: rs-BRANCH
+        input wire [31 : 0] ins_Addr,
+        input wire [31 : 0] ins_jpAddr,
 
         // from RS execute end.
         input wire rs_is_set,
@@ -34,17 +36,32 @@ module ReorderBuffer #(
         output wire [4: 0] new_reg_id,
         output wire [`ROB_WIDTH_BIT - 1: 0] new_ROB_id,
         
+        // answer regFile question about dependency
+        input wire [ROB_SIZE_BIT - 1 : 0] rs1_id,
+        output wire rs1_ready,
+        output wire [31 : 0] rs1_val,
+
+        input wire [ROB_SIZE_BIT - 1 : 0] rs2_id,
+        output wire rs2_ready,
+        output wire [31 : 0] rs2_val,
+
         output reg clear_flag,
+        // actual jump pc
         output reg [31:0] pc_fact
+
+        // (TODO) rs1, rs2, same as rd? 
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
+    localparam TypeRd = 2'b00;
+    localparam TypeSt = 2'b01;
+    localparam TypeBr = 2'b10;
 
     reg ready[0 : ROB_SIZE - 1];
     reg busy[0 : ROB_SIZE - 1];
 
     reg [31 : 0] value[0 : ROB_SIZE - 1];
     reg [4 : 0] rd[0 : ROB_SIZE - 1];
-    reg [`ROB_TYPE - 1 : 0] insType[0 : ROB_SIZE - 1]; // 0: NOP, 1: rs-ALU, 2: lsb-MEM, 3: rs-BRANCH
+    reg [`ROB_TYPE - 1 : 0] insType[0 : ROB_SIZE - 1]; // 0: Rd, 1 Store, 2: Branch
     reg [31 : 0] insAddr[0 : ROB_SIZE - 1];
     reg [31 : 0] jpAddr[0 : ROB_SIZE - 1];
 
@@ -78,8 +95,47 @@ module ReorderBuffer #(
             end
             // new inst , push tail
             if(inst_valid) begin
-                
+                // inst_valid, inst_ready, ins_value, ins_rd, ins_Type, ins_Addr, ins_jpAddr,
+                tail <= tail + 1;
+                busy[tail] <= 1;
+                ready[tail] <= inst_ready;
+                value[tail] <= ins_value;
+                insAddr[tail] <= ins_Addr;
+                jpAddr[tail] <= ins_jpAddr;
+                insType[tail] <= ins_Type;
+                rd[tail] <= ins_rd;
+            end
+            if(busy[head] && ready[head]) begin
+                head <= head + 1;
+                busy[head] <= 0;
+                ready[head] <= 0;
+                // TODO commit head 
+                if (insType[head] == TypeBr) begin
+                    // Br predict fail.
+                end     
             end
         end
     end
+    // original full or newly add full
+    assign full = (head == tail && busy[head]) || (tail + 5'b1 == head && inst_valid && !ready[head]);
+    // 
+    assign empty = head == tail && !busy[head];
+
+    // to RegFile commit.
+    wire commit = busy[head] && ready[head] && rdy_in && insType[head] == TypeRd;
+    assign write_reg_id = commit ? rd[head] : 0;
+    assign write_val = commit ? value[head] : 0;
+    assign write_ROB_id = commit ? head : 0;
+
+    // to RegFile new tail.
+    wire new_element = rdy_in && inst_valid && ins_Type == TypeRd;
+    assign new_reg_id = new_element ? ins_rd : 0;
+    assign new_ROB_id = new_element ? tail : 0;
+
+    // answer RegFile dependency? send back correct value
+    assign rs1_ready = ready[rs1_id];
+    assign rs1_val = value[rs1_id];
+
+    assign rs1_ready = ready[rs1_id];
+    assign rs1_val = value[rs1_id];
 endmodule

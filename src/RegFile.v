@@ -13,8 +13,8 @@ module RegFile (
   input wire [4: 0] ask_reg_id2,
   output wire [31: 0] ret_val_id1,
   output wire [31: 0] ret_val_id2,
-  output wire is_val_id1,
-  output wire is_val_id2,
+  output wire dep_rs1,
+  output wire dep_rs2,
   output wire [`ROB_WIDTH_BIT - 1: 0] ret_ROB_id1,
   output wire [`ROB_WIDTH_BIT - 1: 0] ret_ROB_id2,
 
@@ -27,6 +27,13 @@ module RegFile (
   input wire [`ROB_WIDTH_BIT - 1: 0] write_ROB_id,
   input wire [31: 0] write_val,
 
+  output wire [`ROB_WIDTH_BIT - 1 : 0] rs1_id,
+  input wire rs1_ready,
+  input wire [31 : 0] rs1_val,
+
+  output wire [`ROB_WIDTH_BIT - 1 : 0] rs2_id,
+  input wire rs2_ready,
+  input wire [31 : 0] rs2_val
   // RS op1, op2, free dependency? 
   
 );
@@ -34,18 +41,16 @@ module RegFile (
   reg [`ROB_WIDTH_BIT-1:0] Qi[0:31];
   reg is_Qi[0:31];
 
-  // simple implementation(still has bugs)
-  wire has_dep_id1 = is_Qi[ask_reg_id1];
-  wire has_dep_id2 = is_Qi[ask_reg_id2];
-  assign ret_ROB_id1 = has_dep_id1 ? Qi[ask_reg_id1] : 0;
-  assign ret_ROB_id2 = has_dep_id2 ? Qi[ask_reg_id2] : 0;
-  assign ret_val_id1 = has_dep_id1 ? 0 : regs[ask_reg_id1];
-  assign ret_val_id1 = has_dep_id1 ? 0 : regs[ask_reg_id1];
-  assign ret_val_id2 = has_dep_id2 ? 0 : regs[ask_reg_id2];
-  assign is_val_id1 = !has_dep_id1;
-  assign is_val_id2 = !has_dep_id2;
+  // ask ROB for dependency.(may be rs1_val if it's just calced)
+  wire has_dep_id1 = is_Qi[ask_reg_id1] || new_reg_id && ask_reg_id1 == new_reg_id;
+  wire has_dep_id2 = is_Qi[ask_reg_id2] || new_reg_id && ask_reg_id2 == new_reg_id;
 
-  
+  assign ret_ROB_id1 = ask_reg_id1 == new_reg_id ? new_ROB_id : Qi[ask_reg_id1];
+  assign ret_ROB_id2 = ask_reg_id2 == new_reg_id ? new_ROB_id : Qi[ask_reg_id2];
+  assign ret_val_id1 = has_dep_id1 ? rs1_val : regs[ask_reg_id1];
+  assign ret_val_id2 = has_dep_id2 ? rs2_val : regs[ask_reg_id2];
+  assign dep_rs1 = has_dep_id1 && !rs1_ready;
+  assign dep_rs2 = has_dep_id2 && !rs2_ready;  
 
   always @(posedge clk_in) begin : MainBlock
     integer i;
