@@ -112,6 +112,10 @@ module ReorderBuffer #(
                 // TODO commit head 
                 if (insType[head] == TypeBr) begin
                     // Br predict fail.
+                    if (value[head][0] ^ jpAddr[head][0]) begin
+                        pc_fact <= {jpAddr[head][31:1], 1'b0};
+                        clear_flag <= 1;
+                    end
                 end     
             end
         end
@@ -133,6 +137,7 @@ module ReorderBuffer #(
     assign new_ROB_id = new_element ? tail : 0;
 
     // answer RegFile dependency? send back correct value
+    // TODO: new collected result.
     assign rs1_ready = ready[rs1_id];
     assign rs1_val = value[rs1_id];
 

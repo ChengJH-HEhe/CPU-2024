@@ -11,6 +11,8 @@ module IFectcher (
     output reg [31 : 0] pc,
     output reg is_fetching,
 
+    // decoder ok to receive?
+
     // Decoder (TODO add branch-predictor)
     output reg [31 : 0] output_ins,
     output reg output_ins_ready,

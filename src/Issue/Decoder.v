@@ -103,22 +103,26 @@ wire _change = ins_ready && (last_addr != pc);
 // if instruction not ready, tell lsb/rob/rs valid <= 0
 reg [31:0] last_addr;
 
+wire [6:0] op_map;
 
 always @(posedge clk_in) begin
   if(rst_in) begin
     // reset (TODO)
 
-  end else if(rdy_in) begin
-    // decode try to map opcode, next circle issue
-
-    // if ins_ready, decode ins
-    if(_change) begin
-      case(opcode) 
-        // map opcode.
-      endcase
-    end
   end else begin
+    // default config
+    
+    if(rdy_in) begin
+      // decode try to map opcode, next circle issue? no! one-circle.
+      
 
+      // if ins_ready, decode ins
+      if(_change) begin
+        
+      end
+
+      // send to ROB, LS, LSB
+    end 
   end
 end
 endmodule
