@@ -96,7 +96,7 @@ module ReorderBuffer #(
             // new inst , push tail
             if(inst_valid) begin
                 // inst_valid, inst_ready, ins_value, ins_rd, ins_Type, ins_Addr, ins_jpAddr,
-                tail <= tail + 1;
+                tail <= tail + 1 == ROB_SIZE ? 0 : tail + 1;
                 busy[tail] <= 1;
                 ready[tail] <= inst_ready;
                 value[tail] <= ins_value;
@@ -106,7 +106,7 @@ module ReorderBuffer #(
                 rd[tail] <= ins_rd;
             end
             if(busy[head] && ready[head]) begin
-                head <= head + 1;
+                head <= head + 1 == ROB_SIZE ? 0 : head + 1;
                 busy[head] <= 0;
                 ready[head] <= 0;
                 // TODO commit head 

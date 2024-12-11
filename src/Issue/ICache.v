@@ -1,6 +1,6 @@
 `include "const.v"
 
-`define TAG_INTERVAL 20:11
+`define TAG_INTERVAL 17:11
 `define SUB_INTERVAL 10:2
 `define CACHE_INTERVAL 511:0
 
