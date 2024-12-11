@@ -27,7 +27,7 @@ integer i;
 always @(posedge clk_in) begin
   if(rst_in) begin
     for(i = 0; i < 128; i = i + 1) begin
-      state[i] <= 2'b00;
+      state[i] <= 2'b01;
     end
   end else begin
     if(ROB_valid) 
