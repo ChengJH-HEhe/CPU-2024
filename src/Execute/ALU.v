@@ -15,7 +15,6 @@ module ALU (
   output reg [31 : 0] res,
   output reg [31 : 0] pc_dest,
   output reg [4 : 0] rd_out,
-  output reg jpp,
   output reg valid // ready
 
 );
@@ -23,7 +22,6 @@ module ALU (
     rd_out = rd_in;
     valid = (alu_op > 0);
     pc_dest = pc;
-    jpp = 0;
     res = 0;
       // work
       // 
@@ -86,57 +84,26 @@ module ALU (
         res = (Vi < imm) ? 1 : 0;
       end
       `BEQ: begin
-        if(Vi == Vj) begin
-          jpp = 1;
-        end
-        pc_dest = pc + imm;
+        // if(Vi == Vj) begin
+        //   jpp = 1;
+        // end
+          pc_dest = pc + (Vi == Vj)? imm + 1 : 4;
       end
       `BNE: begin
-        if(Vi != Vj) begin
-          jpp = 1;
-        end
-        pc_dest = pc + imm;
+          pc_dest = pc + (Vi != Vj)? imm + 1 : 4;
       end
       `BLT: begin
-        if($signed(Vi) < $signed(Vj)) begin
-          jpp = 1;
-        end
-        pc_dest = pc + imm;
+          pc_dest = pc + $signed(Vi) < $signed(Vj)? imm + 1 : 4;
       end
       `BGE: begin
-        if($signed(Vi) >= $signed(Vj)) begin
-          jpp = 1;
-        end
-        pc_dest = pc + imm;
+          pc_dest = pc + $signed(Vi) >= $signed(Vj)? imm + 1 : 4;
       end
       `BLTU: begin
-        if(Vi < Vj) begin
-          jpp = 1;
-        end
-        pc_dest = pc + imm;
+          pc_dest = pc + Vi < Vj? imm + 1 : 4;
       end
       `BGEU: begin
-        if(Vi >= Vj) begin
-          jpp = 1;
-        end
-        pc_dest = pc + imm;
+          pc_dest = pc + Vi >= Vj? imm + 1 : 4;
       end
-      `JAL: begin
-        res = pc + 4;
-        pc_dest = pc + imm;
-        jpp = 1;
-      end
-      `JALR: begin
-        res = pc + 4;
-        pc_dest = (Vi + imm) & 32'hFFFFFFFE;
-        jpp = 1;
-      end
-      `AUIPC: begin
-        res = pc + imm;
-      end
-      `LUI: begin
-        res = imm;
-      end 
       default: begin
         res = 0;
       end

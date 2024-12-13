@@ -19,6 +19,7 @@ module Decoder (
   input wire ins_ready,
   input wire [31 : 0]ins,
   input wire [31 : 0]pc,
+  input wire pred_jump,
 
   // output to insFetcher(stall)
   output wire IFetcher_stall,
@@ -166,16 +167,14 @@ always @(posedge clk_in) begin
       LSB_ins_valid <= 0;
       if(_change && _work) begin
         // ROB/LSB/RS_INS_TYPE
-        // case(opcode) 
-        //   RISC_R: ROB_ins_Type <= `TypeRd;
-        //   RISC_I: ROB_ins_Type <= `TypeRd;
-        //   RISC_L: ROB_ins_Type <= `TypeRd;
-        //   RISC_S: ROB_ins_Type <= `TypeSt;
-        //   RISC_B: ROB_ins_Type <= `TypeBr;
-        //   JAL: ROB_ins_Type <= `TypeJp;
-        //   JALR: ROB_ins_Type <= `TypeJp;
-        //   default: ROB_ins_Type <= `TypeRd;
-        // endcase
+        case(opcode) 
+          RISC_R: ROB_ins_Type <= `TypeRd;
+          RISC_I: ROB_ins_Type <= `TypeRd;
+          RISC_L: ROB_ins_Type <= `TypeRd;
+          RISC_S: ROB_ins_Type <= `TypeSt;
+          RISC_B: ROB_ins_Type <= `TypeBr;
+        endcase
+
         last_addr <= ROB_ins_Addr;
 
         ROB_inst_valid <= 1'b1;
@@ -253,6 +252,7 @@ always @(posedge clk_in) begin
           AUIPC: ROB_ins_value <= pc + {immU, 12'b0};
           RISC_B: begin
             IFetcher_clear <= 1;
+            ROB_ins_jpAddr <= pc + pred_jump ? immB : 5;
           end
         endcase
       end

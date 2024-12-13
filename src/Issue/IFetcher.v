@@ -15,8 +15,8 @@ module IFectcher (
     // decoder ok to receive?
 
     // Decoder
-    output reg [31 : 0] output_ins,
     output reg output_ins_ready,
+    output reg [31 : 0] output_ins,
     output reg [31 : 0] output_pc,
     output reg output_jump,
     
@@ -56,7 +56,6 @@ always @(posedge clk_in) begin
         fetch_able <= 1'b0;
         output_ins_ready <= 1'b0;
         to_Cache_pc <= 1'b0;
-
         pc <= jalr_pc;
         state <= 1'b0;
     end else if(state == 1'b0) begin
@@ -77,16 +76,14 @@ always @(posedge clk_in) begin
         // is waiting
         if(~stall && input_ins_ready) begin
             // instruction ready, special : JAL
-            if(input_ins[6:0] == JAL) begin
-                output_jump <= 1'b1;
-                pc <= pc + {{20{input_ins[31]}},input_ins[7], input_ins[30:25], input_ins[11:8], 1'b0};
-            end else begin
-                output_jump <= predict_jump;
-                pc <= predict_pc; // next_circle
-            end
+            pc <= predict_pc; // next_circle
             output_ins <= input_ins;
             output_ins_ready <= 1'b1;
-            output_pc <= pc; // this_circle
+
+            // NEXT FETCH CIRCLE (PC)
+            output_jump <= predict_jump;
+            output_pc <= pc;
+
             state <= 1'b0;
         end
     end
