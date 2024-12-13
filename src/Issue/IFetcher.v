@@ -12,7 +12,7 @@ module IFectcher (
     output reg [31 : 0] to_Cache_pc,
     output reg fetch_able,
 
-    // decoder ok to receive?
+    // decoder ok to receive?(no need)
 
     // Decoder
     output reg output_ins_ready,
@@ -29,7 +29,6 @@ module IFectcher (
     // ROB JALR
     input wire jalr_reset,
     input wire [31 : 0] jalr_pc
-
 );
 
 localparam JAL = 7'b1101111;

@@ -20,6 +20,7 @@ module ReorderBuffer #(
         
         // to Decoder TODO
         output wire [4 : 0] rob_tail,
+        output wire rob_full,
         // to lsb_head
         output wire [4 : 0] rob_head,
         
@@ -123,7 +124,7 @@ module ReorderBuffer #(
         end
     end
     // original full or newly add full
-    assign full = (head == tail && busy[head]) || (tail + 5'b1 == head && inst_valid && !ready[head]);
+    assign rob_full = (head == tail && busy[head]) || (tail + 5'b1 == head && inst_valid && !ready[head]);
     // 
     assign empty = head == tail && !busy[head];
 

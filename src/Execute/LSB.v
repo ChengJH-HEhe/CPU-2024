@@ -46,7 +46,9 @@ module LSB #(
   output reg [31 : 0] lsb_val
 );
 localparam LSB_SIZE = 1 << LSB_SIZE_BIT;
-wire empty, full;
+wire full;
+
+assign full = head == tail + 1;
 
 reg [LSB_SIZE_BIT - 1 : 0] head, tail;
 reg [1 : 0] ticker;
