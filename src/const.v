@@ -8,7 +8,13 @@
 `define LSB_WIDTH_BIT 3
 
 
-`define ROB_TYPE 5
+`define ROB_TYPE 3
+
+`define TypeJp  3'b0
+`define TypeSt  3'b1
+`define TypeBr  3'b10
+`define TypeRd  3'b11
+
 `define RS_TYPE 5
 
 // GENERATE ALL OPCODE TO 1,2,...32.

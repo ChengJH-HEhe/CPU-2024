@@ -39,7 +39,7 @@ module LSB #(
   output reg [31 : 0] addr,
   output reg [31 : 0] data,
   output reg load_or_store,
-  output reg [6 : 0] op,
+  output reg [3 : 0] op,
 
   output reg lsb_ready, // val is valid
   output reg [4 : 0] lsb_ROB_id,

@@ -17,7 +17,12 @@ module ReorderBuffer #(
         input wire [`ROB_TYPE - 1 : 0] ins_Type, // 0: NOP, 1: rs-ALU, 2: lsb-MEM, 3: rs-BRANCH
         input wire [31 : 0] ins_Addr,
         input wire [31 : 0] ins_jpAddr,
-
+        
+        // to Decoder TODO
+        output wire [4 : 0] rob_tail,
+        // to lsb_head
+        output wire [4 : 0] rob_head,
+        
         // from RS execute end.
         input wire rs_is_set,
         input wire [ROB_SIZE_BIT - 1 : 0] rs_set_id,
@@ -26,7 +31,6 @@ module ReorderBuffer #(
         input wire lsb_is_set,
         input wire [ROB_SIZE_BIT - 1 : 0] lsb_set_id,
         input wire [31 : 0] lsb_set_val,
-        // to Decoder 
 
         // to RegFile commit.
         output wire [ROB_SIZE_BIT - 1 : 0] write_reg_id,
@@ -52,9 +56,7 @@ module ReorderBuffer #(
         // (TODO) rs1, rs2, same as rd? 
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
-    localparam TypeRd = 2'b00;
-    localparam TypeSt = 2'b01;
-    localparam TypeBr = 2'b10;
+
 
     reg ready[0 : ROB_SIZE - 1];
     reg busy[0 : ROB_SIZE - 1];
@@ -109,8 +111,8 @@ module ReorderBuffer #(
                 head <= head + 1 == ROB_SIZE ? 0 : head + 1;
                 busy[head] <= 0;
                 ready[head] <= 0;
-                // TODO commit head 
-                if (insType[head] == TypeBr) begin
+                // TODO commit head TypeBr
+                if (insType[head] == `TypeBr) begin
                     // Br predict fail.
                     if (value[head][0] ^ jpAddr[head][0]) begin
                         pc_fact <= {jpAddr[head][31:1], 1'b0};
@@ -126,13 +128,13 @@ module ReorderBuffer #(
     assign empty = head == tail && !busy[head];
 
     // to RegFile commit.
-    wire commit = busy[head] && ready[head] && rdy_in && insType[head] == TypeRd;
+    wire commit = busy[head] && ready[head] && rdy_in && insType[head] == `TypeRd;
     assign write_reg_id = commit ? rd[head] : 0;
     assign write_val = commit ? value[head] : 0;
     assign write_ROB_id = commit ? head : 0;
 
     // to RegFile new tail.
-    wire new_element = rdy_in && inst_valid && ins_Type == TypeRd;
+    wire new_element = rdy_in && inst_valid && ins_Type == `TypeRd;
     assign new_reg_id = new_element ? ins_rd : 0;
     assign new_ROB_id = new_element ? tail : 0;
 

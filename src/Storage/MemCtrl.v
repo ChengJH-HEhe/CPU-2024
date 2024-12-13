@@ -23,8 +23,8 @@ module MemCtrl (
   input wire load_or_store,
 
   // op[1~0] 0,1,2, byte-width;
-  // op[2] = signed
-  // op[3] isLoad 
+  // op[2] = !signed
+  // op[3] isStore 
   input wire [3 : 0] op,
 
   // from/to ICache
@@ -32,7 +32,6 @@ module MemCtrl (
   input wire [31 : 0] ins_addr,
   output reg ins_ready,
   output reg [31 : 0] ins
-
 );
 
 // state: which byte.
@@ -102,7 +101,7 @@ always @(posedge clk_in) begin
           addr_ram <= 32'b0;
           ram_type <= 1'b0;
           // process lsb_val
-          if(op[2]) begin // signed
+          if(~op[2]) begin // signed
             case(total)
               3'b001 :
                 lsb_val[31:8] <= {24{lsb_val[7]}};
