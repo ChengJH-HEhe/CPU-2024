@@ -12,10 +12,8 @@ module RS #(
   input wire inst_valid,
   input wire [`RS_TYPE - 1 : 0] ins_Type, // 0: NOP, 1: rs-ALU, 2: lsb-MEM, 3: rs-BRANCH
   
-  input wire [31 : 0] ins_value1,
-  input wire [4 : 0] ins_rs1,
-  input wire [31 : 0] ins_value2,
-  input wire [4 : 0] ins_rs2,
+  input wire [31 : 0] ins_rs1,
+  input wire [31 : 0] ins_rs2,
   input wire is_Qi,
   input wire is_Qj,
   input wire [4 : 0] Qi,
@@ -104,9 +102,7 @@ always @(posedge clk_in) begin
     if (ready_add < RS_SIZE && inst_valid) begin
       valid[ready_add] <= 1;
       Type[ready_add] <= ins_Type;
-      value1[ready_add] <= ins_value1;
       rs1[ready_add] <= ins_rs1;
-      value2[ready_add] <= ins_value2;
       rs2[ready_add] <= ins_rs2;
       _is_Qi[ready_add] <= is_Qi;
       _is_Qj[ready_add] <= is_Qj;

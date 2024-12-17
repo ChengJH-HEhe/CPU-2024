@@ -21,7 +21,6 @@ module MemCtrl (
   input wire [31 : 0] addr,
   input wire [31 : 0] data,
   input wire load_or_store,
-
   // op[1~0] 0,1,2, byte-width;
   // op[2] = !signed
   // op[3] isStore 

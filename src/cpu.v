@@ -48,25 +48,57 @@ wire pred_jump_ifetcher_bp;
 // ROB_jalr <-> ifetcher
 wire jalr_reset_ifetcher_rob;
 wire [31 : 0] jalr_pc_ifetcher_rob; 
+
 // rob_bp
 wire rdy_bp_rob, success_bp_rob;
 wire [31 : 0] ins_pc_bp_rob;
 
+
+// rob<>decoder
 wire rdy_decoder_rob, full_decoder_rob;
 wire [`ROB_WIDTH_BIT - 1: 0] del_dep_decoder_rob;
-wire rob_tail_deccoder_rob;
-
+wire rob_tail_decoder_rob;
 wire valid_rob_decoder, rdy_rob_decoder;
 wire [31 : 0] ins_value_rob_decoder;
 wire [4 : 0] ins_rd_rob_decoder;
 wire [`ROB_TYPE - 1:0] ins_type_rob_decoder;
 wire [31 : 0] ins_addr_rob_decoder, ins_jpaddr_rob_decoder;
 
+// rob<>lsb
+wire [4:0] rob_head_lsb_rob;
+wire lsb_is_set_rob_lsb;
+wire [4:0] lsb_set_id_rob_lsb;
+wire [31:0] lsb_set_val_rob_lsb;
+
+// rob<>regf
+wire [`ROB_WIDTH_BIT - 1 : 0] write_ROB_id_regf_rob, write_reg_id_regf_rob;
+wire [31 : 0] write_val_regf_rob;
+wire [4 : 0] new_reg_id_regf_rob, new_ROB_id_regf_rob;
+
+wire [ROB_SIZE_BIT - 1: 0] rs1_id_rob_regf, rs2_id_rob_regf;
+wire rs1_rdy_rob_regf, rs2_rdy_rob_regf;
+wire [31 : 0] rs1_val_rob_regf, rs2_val_rob_regf;
+
+// rob_public
+wire clear_flag_rob_public;
+wire [31:0] pc_fact_rob_public;
+
+// rs_decoder
 wire valid_rs_decoder;
 wire [`RS_TYPE - 1 : 0] ins_type_rs_decoder;
 wire [31 : 0] ins_rs1_rs_decoder, ins_rs2_rs_decoder, imm_rs_decoder;
 wire is_qi_rs_decoder, is_qj_rs_decoder;
 wire [4 : 0] qi_rs_decoder, qj_rs_decoder, rob_id_rs_decoder;
+
+// rs<>alu
+wire [31:0] alu_ready_rs_alu;
+wire [4:0] alu_rob_id_rs_alu;
+wire [31:0] alu_val_rs_alu;
+
+wire [6:0] alu_op_alu_rs;
+wire [31:0] vi_alu_rs, vj_alu_rs, imm_alu_rs;
+wire [4:0] rd_alu_rs;
+wire [31:0] pc_alu_rs;
 
 wire lsb_full_decoder_lsb, valid_lsb_decoder;
 wire [`LSB_TYPE - 1 : 0] ins_type_lsb_decoder;
@@ -79,17 +111,89 @@ wire [31:0] ret_val1_decoder_regf, ret_val2_decoder_regf;
 wire dep1_decoder_regf, dep2_decoder_regf;
 wire [`ROB_WIDTH_BIT - 1: 0] ret_rob_id1_decoder_regf, ret_rob_id2_decoder_regf;
 
-Bpredictor bpredictor(
+wire rs_full_public, rs_ready;
+wire [31 : 0] rs_val, lsb_val_rs_lsb;
+wire [4 : 0] rs_ROB_id, lsb_rob_id_rs_lsb;
+
+// Icache, MemCtrl
+wire need_mem_memCtrl_Icache, mem_ins_ready_Icache_memCtrl;
+wire [31 : 0] mem_addr_Icache_memCtrl, mem_ins_Icache_memCtrl;
+
+// lsb<>MemCtrl
+wire mem_ready_lsb_mCtrl;
+wire [31 : 0] mem_val_lsb_mCtrl;
+wire full_mem_mCtrl_lsb, l_or_s_mCtrl_lsb;
+wire [31 : 0] addr_mCtrl_lsb, data_mCtrl_lsb;
+wire [3 : 0] op_mCtrl_lsb;
+wire rdy_commit_public;
+
+LSB lsb(
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
-  .input_ins(input_ins_ifetcher_icache),
-  .input_pc(pc_decoder_ifetcher),
-  .predict_jump(jump_decoder_ifetcher),
-  .predict_pc(predict_pc_ifetcher_bp),
-  .ROB_valid(valid_rob_decoder),
-  .ins_pc(ins_pc_bp_rob),
-  .success(success_bp_rob)
+  .clear_flag(clear_flag_rob_public),
+  .alu_ready(alu_ready_rs_alu),
+  .alu_ROB_id(alu_rob_id_rs_alu),
+  .alu_val(alu_val_rs_alu),
+  .ready_commit(rdy_commit_public),
+  .commit_id(write_ROB_id_regf_rob),
+  .ins_valid(LSB_ins_valid),
+  .ins_Type(LSB_ins_Type),
+  .ins_value1(LSB_ins_rs1),
+  .ins_rd(LSB_ins_rd),
+  .ins_value2(LSB_ins_rs2),
+  .is_Qi(LSB_is_Qi),
+  .is_Qj(LSB_is_Qj),
+  .Qi(LSB_Qi),
+  .Qj(LSB_Qj),
+  .imm(LSB_imm),
+  .mem_ready(mem_ready_lsb_mCtrl),
+  .mem_val(mem_val_lsb_mCtrl),
+  .full_mem(full_mem_mCtrl_lsb),
+  .addr(addr_mCtrl_lsb),
+  .data(data_mCtrl_lsb),
+  .load_or_store(l_or_s_mCtrl_lsb),
+  .op(op_mCtrl_lsb),
+  .lsb_ready(lsb_ready),
+  .lsb_ROB_id(lsb_rob_id_rs_lsb),
+  .lsb_val(lsb_val_rs_lsb)
+);
+
+MemCtrl memCtrl (
+  .clk_in(clk_in),
+  .rst_in(rst_in),
+  .rdy_in(rdy_in),
+  .ram_type(mem_wr),
+  .addr_ram(mem_a),
+  .data_ram(mem_dout),
+  .data_ram_in(mem_din),
+  .io_buffer_full(io_buffer_full),
+  .lsb_val_ready(lsb_val_ready),
+  .lsb_val(lsb_val),
+  .lsb_need(full_mem_mCtrl_lsb),
+  .addr(addr_mCtrl_lsb),
+  .data(data_mCtrl_lsb),
+  .load_or_store(mem_wr),
+  .op(op_mCtrl_lsb),
+  .iCache_need(need_mem_memCtrl_Icache),
+  .ins_addr(mem_addr_Icache_memCtrl),
+  .ins_ready(mem_ins_ready_Icache_memCtrl),
+  .ins(mem_ins_Icache_memCtrl)
+);
+
+ICache icache(
+  .clk_in(clk_in),
+  .rst_in(rst_in),
+  .rdy_in(rdy_in),
+  .need_mem(need_mem_memCtrl_Icache),
+  .mem_addr(mem_addr_Icache_memCtrl),
+  .mem_ins(mem_ins_Icache_memCtrl),
+  .mem_ins_ready(mem_ins_ready_Icache_memCtrl),
+
+  .fetch_able(fetch_able_icache_ifetcher),
+  .input_pc(cache_pc_icache_ifetcher),
+  .hit(rdy_ifetcher_icache),
+  .hit_ins(input_ins_ifetcher_icache)
 );
 
 IFetcher ifetcher(
@@ -112,6 +216,90 @@ IFetcher ifetcher(
   .jalr_reset(jalr_reset_ifetcher_rob),
   .jalr_pc(jalr_pc_ifetcher_rob)
 );
+
+RS rs(
+  .clk_in(clk_in),
+  .rst_in(rst_in),
+  .rdy_in(rdy_in),
+  .clear_flag(clear_flag_rob_public),
+  .inst_valid(valid_rs_decoder),
+  .ins_Type(ins_type_rs_decoder),
+  .ins_rs1(ins_rs1_rs_decoder),
+  .ins_rs2(ins_rs2_rs_decoder),
+  .is_Qi(is_qi_rs_decoder),
+  .is_Qj(is_qj_rs_decoder),
+  .Qi(qi_rs_decoder),
+  .Qj(qj_rs_decoder),
+  .full(rs_full_public),
+  .rs_ready(rs_ready),
+  .rs_val(rs_val),
+  .rs_ROB_id(rs_ROB_id),
+  .alu_ready(alu_ready_rs_alu),
+  .alu_ROB_id(alu_rob_id_rs_alu),
+  .alu_val(alu_val_rs_alu),
+  .lsb_ready(lsb_ready),
+  .lsb_rob_id(lsb_rob_id_rs_lsb),
+  .lsb_val(lsb_val_rs_lsb)
+);
+
+ALU alu(
+  .clk_in(clk_in),
+  .rst_in(rst_in),
+  .rdy_in(rdy_in),
+  .alu_op(alu_op_alu_rs),
+  .Vi(vi_alu_rs),
+  .Vj(vj_alu_rs),
+  .imm(imm_alu_rs),
+  .rd_in(rd_alu_rs),
+  .pc(pc_alu_rs),
+  .res(alu_val_rs_alu),
+  .rd_out(alu_rob_id_rs_alu),
+  .valid(alu_ready_rs_alu)
+);
+
+ReorderBuffer rob(
+  .clk_in(clk_in),
+  .rst_in(rst_in),
+  .rdy_in(rdy_in),
+  .inst_valid(valid_rob_decoder),
+  .inst_ready(rdy_rob_decoder),
+  .ins_value(ins_value_rob_decoder),
+  .ins_rd(ins_rd_rob_decoder),
+  .ins_Type(ins_type_rob_decoder),
+  .ins_Addr(ins_addr_rob_decoder),
+  .ins_jpAddr(ins_jpaddr_rob_decoder),
+  .ROB_del_Dep(del_dep_decoder_rob),
+  .rob_full(full_decoder_rob),
+  .rob_tail(rob_tail_decoder_rob),
+  .rs_is_set(rs1_rdy_rob_regf),
+  .rs_set_id(rs1_id_rob_regf),
+  .rs_set_val(rs1_val_rob_regf),
+  .lsb_is_set(lsb_is_set_rob_lsb),
+  .lsb_set_id(lsb_set_id_rob_lsb),
+  .lsb_set_val(lsb_set_val_rob_lsb),
+  .ready_commit(rdy_commit_public),
+  .write_ROB_id(write_ROB_id_regf_rob),
+  .write_reg_id(write_reg_id_regf_rob),
+  .write_val(write_val_regf_rob),
+  .new_reg_id(new_reg_id_regf_rob),
+  .new_ROB_id(new_ROB_id_regf_rob),
+  .clear_flag(clear_flag_rob_public),
+  .pc_fact(pc_fact_rob_public)
+);
+
+Bpredictor bpredictor(
+  .clk_in(clk_in),
+  .rst_in(rst_in),
+  .rdy_in(rdy_in),
+  .input_ins(input_ins_ifetcher_icache),
+  .input_pc(pc_decoder_ifetcher),
+  .predict_jump(jump_decoder_ifetcher),
+  .predict_pc(predict_pc_ifetcher_bp),
+  .ROB_valid(valid_rob_decoder),
+  .ins_pc(ins_pc_bp_rob),
+  .success(success_bp_rob)
+);
+
 
 Decoder decoder(
   .clk_in(clk_in),

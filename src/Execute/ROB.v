@@ -37,6 +37,7 @@ module ReorderBuffer #(
         output wire [ROB_SIZE_BIT - 1 : 0] write_reg_id,
         output wire [31 : 0] write_val,
         output wire [`ROB_WIDTH_BIT - 1: 0] write_ROB_id,
+
         // to RegFile new tail.
         output wire [4: 0] new_reg_id,
         output wire [`ROB_WIDTH_BIT - 1: 0] new_ROB_id,
@@ -51,9 +52,9 @@ module ReorderBuffer #(
         output wire [31 : 0] rs2_val,
 
         output reg clear_flag,
-        // actual jump pc
-        output reg [31:0] pc_fact
-
+        // actual jump pc ifetcher?
+        output reg [31:0] pc_fact,
+        output wire ready_commit
         // (TODO) rs1, rs2, same as rd? 
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
@@ -130,6 +131,7 @@ module ReorderBuffer #(
 
     // to RegFile commit.
     wire commit = busy[head] && ready[head] && rdy_in && insType[head] == `TypeRd;
+    assign ready_commit = commit;
     assign write_reg_id = commit ? rd[head] : 0;
     assign write_val = commit ? value[head] : 0;
     assign write_ROB_id = commit ? head : 0;

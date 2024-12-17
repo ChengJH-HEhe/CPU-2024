@@ -13,7 +13,6 @@ module ALU (
   //
 
   output reg [31 : 0] res,
-  output reg [31 : 0] pc_dest,
   output reg [4 : 0] rd_out,
   output reg valid // ready
 
@@ -21,7 +20,6 @@ module ALU (
   always @(*) begin
     rd_out = rd_in;
     valid = (alu_op > 0);
-    pc_dest = pc;
     res = 0;
       // work
       // 
@@ -87,22 +85,22 @@ module ALU (
         // if(Vi == Vj) begin
         //   jpp = 1;
         // end
-          pc_dest = pc + (Vi == Vj)? imm + 1 : 4;
+          res = pc + (Vi == Vj)? imm + 1 : 4;
       end
       `BNE: begin
-          pc_dest = pc + (Vi != Vj)? imm + 1 : 4;
+          res = pc + (Vi != Vj)? imm + 1 : 4;
       end
       `BLT: begin
-          pc_dest = pc + $signed(Vi) < $signed(Vj)? imm + 1 : 4;
+          res = pc + $signed(Vi) < $signed(Vj)? imm + 1 : 4;
       end
       `BGE: begin
-          pc_dest = pc + $signed(Vi) >= $signed(Vj)? imm + 1 : 4;
+          res = pc + ($signed(Vi) >= $signed(Vj)? imm + 1 : 4);
       end
       `BLTU: begin
-          pc_dest = pc + Vi < Vj? imm + 1 : 4;
+          res = pc + (Vi < Vj)? imm + 1 : 4;
       end
       `BGEU: begin
-          pc_dest = pc + Vi >= Vj? imm + 1 : 4;
+          res = pc + (Vi >= Vj)? imm + 1 : 4;
       end
       default: begin
         res = 0;

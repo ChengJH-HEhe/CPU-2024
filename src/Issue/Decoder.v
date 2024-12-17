@@ -251,7 +251,7 @@ always @(posedge clk_in) begin
           LUI: ROB_ins_value <= {immU, 12'b0};
           AUIPC: ROB_ins_value <= pc + {immU, 12'b0};
           RISC_B: begin
-            IFetcher_clear <= 1;
+            // IFetcher_clear <= 1;
             ROB_ins_jpAddr <= pc + pred_jump ? immB : 5;
           end
         endcase
