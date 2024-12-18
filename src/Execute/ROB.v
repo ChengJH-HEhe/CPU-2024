@@ -6,7 +6,6 @@ module ReorderBuffer #(
         input  wire                 clk_in,			// system clock signal
         input  wire                 rst_in,			// reset signal
         input  wire					rdy_in,			// ready signal, pause cpu when low
-        input  wire                 clear,
 
 
         // from Decoder: ins info
@@ -54,6 +53,7 @@ module ReorderBuffer #(
         output reg clear_flag,
         // actual jump pc ifetcher?
         output reg [31:0] pc_fact,
+
         output wire ready_commit
         // (TODO) rs1, rs2, same as rd? 
     );
@@ -71,8 +71,9 @@ module ReorderBuffer #(
 
     reg [`ROB_WIDTH_BIT - 1 : 0] head, tail;
     integer i;
+
     always @(posedge clk_in) begin
-        if (rst_in || (clear && rdy_in)) begin
+        if (rst_in || (clear_flag && rdy_in)) begin
             clear_flag <= 0;
             head <= 0;
             tail <= 0;
@@ -117,7 +118,7 @@ module ReorderBuffer #(
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
                     if (value[head][0] ^ jpAddr[head][0]) begin
-                        pc_fact <= {jpAddr[head][31:1], 1'b0};
+                        pc_fact <= {value[head][31:1], 1'b0};
                         clear_flag <= 1;
                     end
                 end     
@@ -127,7 +128,7 @@ module ReorderBuffer #(
     // original full or newly add full
     assign rob_full = (head == tail && busy[head]) || (tail + 5'b1 == head && inst_valid && !ready[head]);
     // 
-    assign empty = head == tail && !busy[head];
+    // assign empty = head == tail && !busy[head];
 
     // to RegFile commit.
     wire commit = busy[head] && ready[head] && rdy_in && insType[head] == `TypeRd;
@@ -143,9 +144,13 @@ module ReorderBuffer #(
 
     // answer RegFile dependency? send back correct value
     // TODO: new collected result.
-    assign rs1_ready = ready[rs1_id];
-    assign rs1_val = value[rs1_id];
+    assign rs1_ready = ready[rs1_id] || (rs_is_set && rs1_id == rs_set_id) || (lsb_is_set && rs1_id == lsb_set_id) || (inst_valid && inst_ready && rs1_id == tail);
+    assign rs1_val = ready[rs1_id]? value[rs1_id] : 
+                    rs_is_set && rs1_id == rs_set_id ? rs_set_val : 
+                    lsb_is_set && rs1_id == lsb_set_id ? lsb_set_val : ins_value;
 
-    assign rs1_ready = ready[rs1_id];
-    assign rs1_val = value[rs1_id];
+    assign rs2_ready = ready[rs2_id] || (rs_is_set && rs2_id == rs_set_id) || (lsb_is_set && rs2_id == lsb_set_id) || (inst_valid && inst_ready && rs2_id == tail);
+    assign rs2_val = ready[rs2_id]? value[rs2_id] : 
+                    rs_is_set && rs2_id == rs_set_id ? rs_set_val : 
+                    lsb_is_set && rs2_id == lsb_set_id ? lsb_set_val : ins_value;
 endmodule

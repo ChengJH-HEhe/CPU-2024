@@ -10,7 +10,7 @@ module LSB #(
   input  wire clear_flag, // clear all data in LSB
 
   // from ALU
-  input wire [31:0] alu_ready,
+  input wire alu_ready,
   input wire [4:0] alu_ROB_id,
   input wire [31:0] alu_val,
 
@@ -153,7 +153,7 @@ always @(posedge clk_in) begin
     endcase
     // push tail
     if(ins_valid) begin
-      tail <= (tail + 1) % 16;
+      tail <= tail + 1;
       valid[tail] <= 1; // exist elements
       Type[tail] <= ins_Type; 
       // b,h,w / s,l 

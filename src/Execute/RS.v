@@ -26,7 +26,7 @@ module RS #(
   output wire [4 : 0] rs_ROB_id,
 
   // from ALU
-  input wire [31:0] alu_ready,
+  input wire  alu_ready,
   input wire [4:0] alu_ROB_id,
   input wire [31:0] alu_val,
 

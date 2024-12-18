@@ -46,7 +46,6 @@ wire rdy_ifetcher_icache, fetch_able_icache_ifetcher;
 wire [31 : 0] branch_ins_bp_ifetcher, branch_pc_bp_ifetcher, predict_pc_ifetcher_bp;
 wire pred_jump_ifetcher_bp;
 // ROB_jalr <-> ifetcher
-wire jalr_reset_ifetcher_rob;
 wire [31 : 0] jalr_pc_ifetcher_rob; 
 
 // rob_bp
@@ -57,7 +56,6 @@ wire [31 : 0] ins_pc_bp_rob;
 // rob<>decoder
 wire rdy_decoder_rob, full_decoder_rob;
 wire [`ROB_WIDTH_BIT - 1: 0] del_dep_decoder_rob;
-wire rob_tail_decoder_rob;
 wire valid_rob_decoder, rdy_rob_decoder;
 wire [31 : 0] ins_value_rob_decoder;
 wire [4 : 0] ins_rd_rob_decoder;
@@ -75,7 +73,7 @@ wire [`ROB_WIDTH_BIT - 1 : 0] write_ROB_id_regf_rob, write_reg_id_regf_rob;
 wire [31 : 0] write_val_regf_rob;
 wire [4 : 0] new_reg_id_regf_rob, new_ROB_id_regf_rob;
 
-wire [ROB_SIZE_BIT - 1: 0] rs1_id_rob_regf, rs2_id_rob_regf;
+wire [`ROB_WIDTH_BIT - 1: 0] rs1_id_rob_regf, rs2_id_rob_regf;
 wire rs1_rdy_rob_regf, rs2_rdy_rob_regf;
 wire [31 : 0] rs1_val_rob_regf, rs2_val_rob_regf;
 
@@ -91,7 +89,7 @@ wire is_qi_rs_decoder, is_qj_rs_decoder;
 wire [4 : 0] qi_rs_decoder, qj_rs_decoder, rob_id_rs_decoder;
 
 // rs<>alu
-wire [31:0] alu_ready_rs_alu;
+wire alu_ready_rs_alu;
 wire [4:0] alu_rob_id_rs_alu;
 wire [31:0] alu_val_rs_alu;
 
@@ -137,16 +135,16 @@ LSB lsb(
   .alu_val(alu_val_rs_alu),
   .ready_commit(rdy_commit_public),
   .commit_id(write_ROB_id_regf_rob),
-  .ins_valid(LSB_ins_valid),
-  .ins_Type(LSB_ins_Type),
-  .ins_value1(LSB_ins_rs1),
-  .ins_rd(LSB_ins_rd),
-  .ins_value2(LSB_ins_rs2),
-  .is_Qi(LSB_is_Qi),
-  .is_Qj(LSB_is_Qj),
-  .Qi(LSB_Qi),
-  .Qj(LSB_Qj),
-  .imm(LSB_imm),
+  .ins_valid(valid_lsb_decoder),
+  .ins_Type(ins_type_lsb_decoder),
+  .ins_value1(ins_rs1_lsb_decoder),
+  .ins_rd(rob_id_lsb_decoder),
+  .ins_value2(ins_rs2_lsb_decoder),
+  .is_Qi(is_qi_lsb_decoder),
+  .is_Qj(is_qj_lsb_decoder),
+  .Qi(qi_lsb_decoder),
+  .Qj(qj_lsb_decoder),
+  .imm(imm_lsb_decoder),
   .mem_ready(mem_ready_lsb_mCtrl),
   .mem_val(mem_val_lsb_mCtrl),
   .full_mem(full_mem_mCtrl_lsb),
@@ -154,7 +152,7 @@ LSB lsb(
   .data(data_mCtrl_lsb),
   .load_or_store(l_or_s_mCtrl_lsb),
   .op(op_mCtrl_lsb),
-  .lsb_ready(lsb_ready),
+  .lsb_ready(lsb_is_set_rob_lsb),
   .lsb_ROB_id(lsb_rob_id_rs_lsb),
   .lsb_val(lsb_val_rs_lsb)
 );
@@ -168,8 +166,8 @@ MemCtrl memCtrl (
   .data_ram(mem_dout),
   .data_ram_in(mem_din),
   .io_buffer_full(io_buffer_full),
-  .lsb_val_ready(lsb_val_ready),
-  .lsb_val(lsb_val),
+  .lsb_val_ready(mem_ready_lsb_mCtrl),
+  .lsb_val(mem_val_lsb_mCtrl),
   .lsb_need(full_mem_mCtrl_lsb),
   .addr(addr_mCtrl_lsb),
   .data(data_mCtrl_lsb),
@@ -213,8 +211,8 @@ IFetcher ifetcher(
   .branch_pc(branch_pc_bp_ifetcher),
   .predict_jump(pred_jump_ifetcher_bp),
   .predict_pc(predict_pc_ifetcher_bp),
-  .jalr_reset(jalr_reset_ifetcher_rob),
-  .jalr_pc(jalr_pc_ifetcher_rob)
+  .jalr_reset(clear_flag_rob_public),
+  .jalr_pc(pc_fact_rob_public)
 );
 
 RS rs(
@@ -237,7 +235,7 @@ RS rs(
   .alu_ready(alu_ready_rs_alu),
   .alu_ROB_id(alu_rob_id_rs_alu),
   .alu_val(alu_val_rs_alu),
-  .lsb_ready(lsb_ready),
+  .lsb_ready(lsb_is_set_rob_lsb),
   .lsb_rob_id(lsb_rob_id_rs_lsb),
   .lsb_val(lsb_val_rs_lsb)
 );
@@ -268,9 +266,8 @@ ReorderBuffer rob(
   .ins_Type(ins_type_rob_decoder),
   .ins_Addr(ins_addr_rob_decoder),
   .ins_jpAddr(ins_jpaddr_rob_decoder),
-  .ROB_del_Dep(del_dep_decoder_rob),
+  .rob_tail(del_dep_decoder_rob),
   .rob_full(full_decoder_rob),
-  .rob_tail(rob_tail_decoder_rob),
   .rs_is_set(rs1_rdy_rob_regf),
   .rs_set_id(rs1_id_rob_regf),
   .rs_set_val(rs1_val_rob_regf),
@@ -284,8 +281,44 @@ ReorderBuffer rob(
   .new_reg_id(new_reg_id_regf_rob),
   .new_ROB_id(new_ROB_id_regf_rob),
   .clear_flag(clear_flag_rob_public),
-  .pc_fact(pc_fact_rob_public)
+  .pc_fact(pc_fact_rob_public),
+  .rs1_id(rs1_id_rob_regf),
+  .rs2_id(rs2_id_rob_regf),
+  .rs1_ready(rs1_rdy_rob_regf),
+  .rs1_val(rs1_val_rob_regf),
+  .rs2_ready(rs2_rdy_rob_regf),
+  .rs2_val(rs2_val_rob_regf)
+
 );
+
+// outports wire
+
+RegFile u_RegFile(
+  .clk_in       	( clk_in        ),
+  .rst_in       	( rst_in        ),
+  .rdy_in       	( rdy_in        ),
+  .clear_flag   	( clear_flag_rob_public    ),
+  .ask_reg_id1  	( ask_id1_regf_decoder   ),
+  .ask_reg_id2  	( ask_id2_regf_decoder   ),
+  .ret_val_id1  	( ret_val1_decoder_regf   ),
+  .ret_val_id2  	( ret_val2_decoder_regf   ),
+  .dep_rs1      	( dep1_decoder_regf       ),
+  .dep_rs2      	( dep2_decoder_regf       ),
+  .ret_ROB_id1  	( ret_rob_id1_decoder_regf   ),
+  .ret_ROB_id2  	( ret_rob_id2_decoder_regf   ),
+  .new_reg_id   	( new_reg_id_regf_rob    ),
+  .new_ROB_id   	( new_ROB_id_regf_rob    ),
+  .write_reg_id 	( write_reg_id_regf_rob  ),
+  .write_ROB_id 	( write_ROB_id_regf_rob  ),
+  .write_val    	( write_val_regf_rob     ),
+  .rs1_id       	( rs1_id_rob_regf        ),
+  .rs1_ready    	( rs1_rdy_rob_regf     ),
+  .rs1_val      	( rs1_val_rob_regf       ),
+  .rs2_id       	( rs2_id_rob_regf        ),
+  .rs2_ready    	( rs2_rdy_rob_regf     ),
+  .rs2_val      	( rs2_val_rob_regf       )
+);
+
 
 Bpredictor bpredictor(
   .clk_in(clk_in),
@@ -323,7 +356,7 @@ Decoder decoder(
   .ROB_ins_Addr(ins_addr_rob_decoder),
   .ROB_ins_jpAddr(ins_jpaddr_rob_decoder),
   .rs_full(valid_rs_decoder),
-  .rob_tail(rob_tail_deccoder_rob),
+  .rob_tail(del_dep_decoder_rob),
   .RS_inst_valid(valid_rs_decoder),
   .RS_ins_Type(ins_type_rs_decoder),
   .RS_ins_rs1(ins_rs1_rs_decoder),
@@ -337,22 +370,23 @@ Decoder decoder(
   .lsb_full(lsb_full_decoder_lsb),
   .LSB_ins_valid(valid_lsb_decoder),
   .LSB_ins_Type(ins_type_lsb_decoder),
-  .LSB_ins_rd(ins_rd_lsb_decoder),
+  .LSB_ins_rd(rob_id_lsb_decoder),
   .LSB_ins_rs1(ins_rs1_lsb_decoder),
   .LSB_ins_rs2(ins_rs2_lsb_decoder),
+
   .LSB_is_Qi(is_qi_lsb_decoder),
   .LSB_is_Qj(is_qj_lsb_decoder),
   .LSB_Qi(qi_lsb_decoder),
   .LSB_Qj(qj_lsb_decoder),
-  .LSB_rob_id(rob_id_lsb_decoder),
+  .LSB_imm(imm_lsb_decoder),
   .ask_reg_id1(ask_id1_regf_decoder),
   .ask_reg_id2(ask_id2_regf_decoder),
   .REGF_ret_val_id1(ret_val1_decoder_regf),
   .REGF_ret_val_id2(ret_val2_decoder_regf),
   .REGF_dep_rs1(dep1_decoder_regf),
   .REGF_dep_rs2(dep2_decoder_regf),
-  .ret_rob_id1_decoder_regf(ret_rob_id1_decoder_regf),
-  .ret_rob_id2_decoder_regf(ret_rob_id2_decoder_regf)
+  .REGF_ret_ROB_id1(ret_rob_id1_decoder_regf),
+  .REGF_ret_ROB_id2(ret_rob_id2_decoder_regf)
 );
 
 endmodule

@@ -52,6 +52,9 @@ module RegFile (
   assign dep_rs1 = has_dep_id1 && !rs1_ready;
   assign dep_rs2 = has_dep_id2 && !rs2_ready;  
 
+  assign rs1_id = ret_ROB_id1;
+  assign rs2_id = ret_ROB_id2;
+
   always @(posedge clk_in) begin : MainBlock
     integer i;
     if(rst_in) begin

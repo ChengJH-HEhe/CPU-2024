@@ -18,7 +18,7 @@ module ICache (
   input wire fetch_able,
   input wire [31 : 0] input_pc, 
   output wire hit,
-  output wire hit_ins
+  output wire [31 : 0] hit_ins
 
 );
 

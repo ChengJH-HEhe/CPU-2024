@@ -28,6 +28,7 @@ module Decoder (
 
   // input from ROB
   input wire ROB_ready,
+  input wire [4: 0] rob_tail,
   input wire [`ROB_WIDTH_BIT - 1: 0] ROB_del_Dep,
   input wire rob_full,
 
@@ -41,7 +42,7 @@ module Decoder (
   output reg [31 : 0] ROB_ins_jpAddr,
 
   input wire rs_full,
-  input wire rob_tail,
+  
   // output to RS
   output reg RS_inst_valid,
   output reg [`RS_TYPE - 1 : 0] RS_ins_Type,

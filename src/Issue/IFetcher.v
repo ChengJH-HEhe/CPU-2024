@@ -1,6 +1,6 @@
 `include "const.v"
 
-module IFectcher (
+module IFetcher (
     input wire stall, // ROB/RS/LSB
     input  wire                 clk_in,			// system clock signal
     input  wire                 rst_in,			// reset signal
