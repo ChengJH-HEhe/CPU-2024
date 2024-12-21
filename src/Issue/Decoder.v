@@ -17,9 +17,9 @@ module Decoder (
 
   // ins input /from.to insFetcher
   input wire ins_ready,
-  input wire [31 : 0]ins,
-  input wire [31 : 0]pc,
-  input wire pred_jump,
+  input wire [31 : 0] ins,
+  input wire [31 : 0] pc, // {0, bit} real_ifetcher_pc + prediction result.
+  input wire [31 : 0] predict_nxt_pc,
 
   // output to insFetcher(stall)
   output wire IFetcher_stall,
@@ -80,6 +80,8 @@ module Decoder (
   input wire [`ROB_WIDTH_BIT - 1: 0] REGF_ret_ROB_id2
 );
 
+wire [31 : 0]real_ifetcher_pc = {pc[31 : 1], 1'b0};
+
 localparam RISC_R = 7'b0110011;
 localparam RISC_I = 7'b0010011;
 localparam RISC_L = 7'b0000011;
@@ -119,7 +121,7 @@ wire [3:0] lsb_op = {~opcode[5], funct3};
 wire _Jalr = opcode == JALR;
 
 // if last addr inst = now, now need to change 
-wire _change = ins_ready && (last_addr != pc);
+wire _change = ins_ready && (last_addr != real_ifetcher_pc);
 wire _work = (!_lsb || !lsb_full) && (!_rs || !rs_full) && !rob_full && (!_Jalr || !_QI);
 
 // if instruction not ready, tell lsb/rob/rs valid <= 0
@@ -236,24 +238,24 @@ always @(posedge clk_in) begin
         // rob special ins
         ROB_inst_ready <= opcode == JAL || opcode == JALR || opcode == LUI || opcode == AUIPC;
         ROB_ins_rd <= rd;
-        ROB_ins_Addr <= pc;
+        ROB_ins_Addr <= real_ifetcher_pc;
         // jump addr estimated by ROB
         case(opcode)
           JAL: begin
-            ROB_ins_value <= pc + 4;
-            IFetcher_clear <= 1;
-            IFetcher_new_addr <= pc + immJ;
+            ROB_ins_value <= real_ifetcher_pc + 4;
+            IFetcher_clear <= 1; // definitely lost.
+            IFetcher_new_addr <= real_ifetcher_pc + immJ;
           end
           JALR: begin
-            ROB_ins_value <= pc + 4;
+            ROB_ins_value <= real_ifetcher_pc + 4;
             IFetcher_clear <= 1;
             IFetcher_new_addr <= (rs1_val + {{20{immI[10]}}, immI}) & ~32'b1;
           end
           LUI: ROB_ins_value <= {immU, 12'b0};
-          AUIPC: ROB_ins_value <= pc + {immU, 12'b0};
+          AUIPC: ROB_ins_value <= {real_ifetcher_pc[31:1],1'b0} + {immU, 12'b0};
           RISC_B: begin
-            // IFetcher_clear <= 1;
-            ROB_ins_jpAddr <= pc + pred_jump ? immB : 5;
+            //[pc] is branch , predict_pc result in b-predictor? 
+            ROB_ins_jpAddr <= predict_nxt_pc;
           end
         endcase
       end
@@ -262,7 +264,7 @@ always @(posedge clk_in) begin
   end
 end
 
-// send to ROB, LS, LSB assign wire
+// send to ifetcher, no need to read ins
 assign IFetcher_stall = _change && !_work;
 
 // output wire : ask
@@ -270,25 +272,25 @@ assign ask_reg_id1 = rs1;
 assign ask_reg_id2 = rs2;
 
 // RS output wire :
-assign RS_ins_rs1 = REGF_ret_val_id1;
-assign RS_Qi = REGF_ret_ROB_id1;
-assign RS_is_Qi = REGF_dep_rs1;
+assign RS_ins_rs1 = rs1_val;
+assign RS_Qi = QI;
+assign RS_is_Qi = _QI;
 
-assign RS_ins_rs2 = REGF_ret_val_id2;
-assign RS_Qj = REGF_ret_ROB_id2;
-assign RS_is_Qj = REGF_dep_rs2;
+assign RS_ins_rs2 = rs2_val;
+assign RS_Qj = QJ;
+assign RS_is_Qj = _QJ;
 
 assign RS_rob_id = rob_tail;
 assign RS_imm = rs_imm;
 
 // LSB output wire :
-assign LSB_ins_rs1 = REGF_ret_val_id1;
-assign LSB_Qi = REGF_ret_ROB_id1;
-assign LSB_is_Qi = REGF_dep_rs1;
+assign LSB_ins_rs1 = rs1_val;
+assign LSB_Qi = QI;
+assign LSB_is_Qi = _QI;
 
-assign LSB_ins_rs2 = REGF_ret_val_id2;
-assign LSB_Qj = REGF_ret_ROB_id2;
-assign LSB_is_Qj = REGF_dep_rs2;
+assign LSB_ins_rs2 = rs2_val;
+assign LSB_Qj = QJ;
+assign LSB_is_Qj = _QJ;
 
 assign LSB_ins_rd = rob_tail;
 assign LSB_imm = lsb_imm;

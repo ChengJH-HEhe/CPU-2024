@@ -6,9 +6,10 @@ module IFetcher (
     input  wire                 rst_in,			// reset signal
     input  wire					rdy_in,			// ready signal, pause cpu when low
 
-    // icache
     input wire [31 : 0] input_ins,
     input wire input_ins_ready,
+    
+    // icache
     output reg [31 : 0] to_Cache_pc,
     output reg fetch_able,
 
@@ -18,12 +19,10 @@ module IFetcher (
     output reg output_ins_ready,
     output reg [31 : 0] output_ins,
     output reg [31 : 0] output_pc,
-    output reg output_jump,
-    
+    output reg [31 : 0] predict_nxt_pc,
     // b-predictor
     output wire [31 : 0] branch_ins,
     output wire [31 : 0] branch_pc,
-    input wire predict_jump,
     input wire [31 : 0] predict_pc,
 
     // ROB JALR
@@ -45,7 +44,6 @@ always @(posedge clk_in) begin
         output_ins <= 32'b0;
         output_ins_ready <= 1'b0;
         output_pc <= 32'b0;
-        output_jump <= 1'b0;
 
         pc <= 32'b0;
         state <= 1'b0;
@@ -69,7 +67,7 @@ always @(posedge clk_in) begin
             state <= 1'b1;
             
             output_ins_ready <= 1'b0;
-            output_jump <= 1'b0;
+            output_pc <= 0;
         end
     end else begin
         // is waiting
@@ -80,8 +78,8 @@ always @(posedge clk_in) begin
             output_ins_ready <= 1'b1;
 
             // NEXT FETCH CIRCLE (PC)
-            output_jump <= predict_jump;
             output_pc <= pc;
+            predict_nxt_pc <= predict_pc;
 
             state <= 1'b0;
         end

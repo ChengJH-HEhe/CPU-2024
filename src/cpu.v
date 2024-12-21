@@ -30,28 +30,23 @@ module cpu(
 // - 0x30004 read: read clocks passed since cpu starts (in dword, 4 bytes)
 // - 0x30004 write: indicates program stop (will output '\0' through uart tx)
 
-// format name-receiver-sender
 
+// format name-receiver-sender
 // Decoder
 
-wire rdy_decoder_ifetcher, jump_decoder_ifetcher;
-wire [31 : 0] pc_decoder_ifetcher, ins_decoder_ifetcher;
-wire stall_ifetcher_decoder, clear_ifetcher_decoder;
-wire [31 : 0] addr_ifetcher_decoder;
+wire rdy_decoder_ifetcher;
+wire [31 : 0] pc_decoder_ifetcher, ins_decoder_ifetcher, predict_pc_decoder_ifetcher;
+wire stall_ifetcher_decoder;
 
 // icache<->ifetcher
 wire [31 : 0] input_ins_ifetcher_icache, cache_pc_icache_ifetcher;
 wire rdy_ifetcher_icache, fetch_able_icache_ifetcher;
 // b-predictor<->ifetcher
 wire [31 : 0] branch_ins_bp_ifetcher, branch_pc_bp_ifetcher, predict_pc_ifetcher_bp;
-wire pred_jump_ifetcher_bp;
+
 // ROB_jalr <-> ifetcher
-wire [31 : 0] jalr_pc_ifetcher_rob; 
 
-// rob_bp
-wire rdy_bp_rob, success_bp_rob;
-wire [31 : 0] ins_pc_bp_rob;
-
+// rob_bp pc, ins
 
 // rob<>decoder
 wire rdy_decoder_rob, full_decoder_rob;
@@ -64,9 +59,9 @@ wire [31 : 0] ins_addr_rob_decoder, ins_jpaddr_rob_decoder;
 
 // rob<>lsb
 wire [4:0] rob_head_lsb_rob;
-wire lsb_is_set_rob_lsb;
-wire [4:0] lsb_set_id_rob_lsb;
-wire [31:0] lsb_set_val_rob_lsb;
+wire lsb_ready_public;
+wire [4:0] lsb_rob_id_public;
+wire [31:0] lsb_val_public;
 
 // rob<>regf
 wire [`ROB_WIDTH_BIT - 1 : 0] write_ROB_id_regf_rob, write_reg_id_regf_rob;
@@ -89,29 +84,29 @@ wire is_qi_rs_decoder, is_qj_rs_decoder;
 wire [4 : 0] qi_rs_decoder, qj_rs_decoder, rob_id_rs_decoder;
 
 // rs<>alu
-wire alu_ready_rs_alu;
-wire [4:0] alu_rob_id_rs_alu;
-wire [31:0] alu_val_rs_alu;
 
 wire [6:0] alu_op_alu_rs;
 wire [31:0] vi_alu_rs, vj_alu_rs, imm_alu_rs;
 wire [4:0] rd_alu_rs;
 wire [31:0] pc_alu_rs;
 
+// lsb 
 wire lsb_full_decoder_lsb, valid_lsb_decoder;
 wire [`LSB_TYPE - 1 : 0] ins_type_lsb_decoder;
 wire [31 : 0] ins_rs1_lsb_decoder, ins_rs2_lsb_decoder, imm_lsb_decoder;
 wire is_qi_lsb_decoder, is_qj_lsb_decoder;
 wire [4 : 0] qi_lsb_decoder, qj_lsb_decoder, rob_id_lsb_decoder;
 
+// regf
 wire [4:0] ask_id1_regf_decoder, ask_id2_regf_decoder;
 wire [31:0] ret_val1_decoder_regf, ret_val2_decoder_regf;
 wire dep1_decoder_regf, dep2_decoder_regf;
 wire [`ROB_WIDTH_BIT - 1: 0] ret_rob_id1_decoder_regf, ret_rob_id2_decoder_regf;
 
-wire rs_full_public, rs_ready;
-wire [31 : 0] rs_val, lsb_val_rs_lsb;
-wire [4 : 0] rs_ROB_id, lsb_rob_id_rs_lsb;
+// rs_public
+wire rs_full_public, rs_ready_public;
+wire [31 : 0] rs_val_public;
+wire [4 : 0] rs_rob_id_public;
 
 // Icache, MemCtrl
 wire need_mem_memCtrl_Icache, mem_ins_ready_Icache_memCtrl;
@@ -130,9 +125,9 @@ LSB lsb(
   .rst_in(rst_in),
   .rdy_in(rdy_in),
   .clear_flag(clear_flag_rob_public),
-  .alu_ready(alu_ready_rs_alu),
-  .alu_ROB_id(alu_rob_id_rs_alu),
-  .alu_val(alu_val_rs_alu),
+  .rs_ready(rs_ready_public),
+  .rs_ROB_id(rs_rob_id_public),
+  .rs_val(rs_val_public),
   .ready_commit(rdy_commit_public),
   .commit_id(write_ROB_id_regf_rob),
   .ins_valid(valid_lsb_decoder),
@@ -152,9 +147,9 @@ LSB lsb(
   .data(data_mCtrl_lsb),
   .load_or_store(l_or_s_mCtrl_lsb),
   .op(op_mCtrl_lsb),
-  .lsb_ready(lsb_is_set_rob_lsb),
-  .lsb_ROB_id(lsb_rob_id_rs_lsb),
-  .lsb_val(lsb_val_rs_lsb)
+  .lsb_ready(lsb_ready_public),
+  .lsb_ROB_id(lsb_rob_id_public),
+  .lsb_val(lsb_val_public)
 );
 
 MemCtrl memCtrl (
@@ -206,11 +201,10 @@ IFetcher ifetcher(
   .output_ins_ready(rdy_decoder_ifetcher),
   .output_ins(ins_decoder_ifetcher),
   .output_pc(pc_decoder_ifetcher),
-  .output_jump(jump_decoder_ifetcher),
   .branch_ins(branch_ins_bp_ifetcher),
   .branch_pc(branch_pc_bp_ifetcher),
-  .predict_jump(pred_jump_ifetcher_bp),
   .predict_pc(predict_pc_ifetcher_bp),
+  .predict_nxt_pc(predict_pc_decoder_ifetcher),
   .jalr_reset(clear_flag_rob_public),
   .jalr_pc(pc_fact_rob_public)
 );
@@ -219,6 +213,7 @@ RS rs(
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
+
   .clear_flag(clear_flag_rob_public),
   .inst_valid(valid_rs_decoder),
   .ins_Type(ins_type_rs_decoder),
@@ -229,15 +224,20 @@ RS rs(
   .Qi(qi_rs_decoder),
   .Qj(qj_rs_decoder),
   .full(rs_full_public),
-  .rs_ready(rs_ready),
-  .rs_val(rs_val),
-  .rs_ROB_id(rs_ROB_id),
-  .alu_ready(alu_ready_rs_alu),
-  .alu_ROB_id(alu_rob_id_rs_alu),
-  .alu_val(alu_val_rs_alu),
-  .lsb_ready(lsb_is_set_rob_lsb),
-  .lsb_rob_id(lsb_rob_id_rs_lsb),
-  .lsb_val(lsb_val_rs_lsb)
+  // give to alu ready
+  .alu_op(alu_op_alu_rs),
+  .Vi(vi_alu_rs),
+  .Vj(vj_alu_rs),
+  .imm(imm_alu_rs),
+  .rd(rd_alu_rs),
+  .pc(pc_alu_rs),
+  // broadcast
+  .rs_ready(rs_ready_public),
+  .rs_ROB_id(rs_rob_id_public),
+  .rs_val(rs_val_public),
+  .lsb_ready(lsb_ready_public),
+  .lsb_rob_id(lsb_rob_id_public),
+  .lsb_val(lsb_val_public)
 );
 
 ALU alu(
@@ -250,9 +250,9 @@ ALU alu(
   .imm(imm_alu_rs),
   .rd_in(rd_alu_rs),
   .pc(pc_alu_rs),
-  .res(alu_val_rs_alu),
-  .rd_out(alu_rob_id_rs_alu),
-  .valid(alu_ready_rs_alu)
+  .valid(rs_ready_public),
+  .rd_out(rs_rob_id_public),
+  .res(rs_val_public)
 );
 
 ReorderBuffer rob(
@@ -268,14 +268,18 @@ ReorderBuffer rob(
   .ins_jpAddr(ins_jpaddr_rob_decoder),
   .rob_tail(del_dep_decoder_rob),
   .rob_full(full_decoder_rob),
-  .rs_is_set(rs1_rdy_rob_regf),
-  .rs_set_id(rs1_id_rob_regf),
-  .rs_set_val(rs1_val_rob_regf),
-  .lsb_is_set(lsb_is_set_rob_lsb),
-  .lsb_set_id(lsb_set_id_rob_lsb),
-  .lsb_set_val(lsb_set_val_rob_lsb),
+  
+  .rs_is_set(rs_ready_public),
+  .rs_set_id(rs_rob_id_public),
+  .rs_set_val(rs_val_public),
+
+  .lsb_is_set(lsb_ready_public),
+  .lsb_set_id(lsb_rob_id_public),
+  .lsb_set_val(lsb_val_public),
+
   .ready_commit(rdy_commit_public),
   .write_ROB_id(write_ROB_id_regf_rob),
+
   .write_reg_id(write_reg_id_regf_rob),
   .write_val(write_val_regf_rob),
   .new_reg_id(new_reg_id_regf_rob),
@@ -324,13 +328,11 @@ Bpredictor bpredictor(
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
-  .input_ins(input_ins_ifetcher_icache),
-  .input_pc(pc_decoder_ifetcher),
-  .predict_jump(jump_decoder_ifetcher),
+  .input_ins(branch_ins_bp_ifetcher),
+  .input_pc(branch_pc_bp_ifetcher),
   .predict_pc(predict_pc_ifetcher_bp),
-  .ROB_valid(valid_rob_decoder),
-  .ins_pc(ins_pc_bp_rob),
-  .success(success_bp_rob)
+  .ROB_valid(rdy_commit_public),
+  .ins_pc(pc_fact_rob_public)
 );
 
 
@@ -341,10 +343,10 @@ Decoder decoder(
   .ins_ready(rdy_decoder_ifetcher),
   .ins(ins_decoder_ifetcher),
   .pc(pc_decoder_ifetcher),
-  .pred_jump(jump_decoder_ifetcher),
+  .predict_nxt_pc(predict_pc_decoder_ifetcher),
   .IFetcher_stall(stall_ifetcher_decoder),
-  .IFetcher_new_addr(addr_ifetcher_decoder),
-  .IFetcher_clear(clear_ifetcher_decoder),
+  .IFetcher_new_addr(pc_fact_rob_public),
+  .IFetcher_clear(clear_flag_rob_public),
   .ROB_ready(rdy_decoder_rob),
   .ROB_del_Dep(del_dep_decoder_rob),
   .rob_full(full_decoder_rob),
@@ -355,7 +357,7 @@ Decoder decoder(
   .ROB_ins_Type(ins_type_rob_decoder),
   .ROB_ins_Addr(ins_addr_rob_decoder),
   .ROB_ins_jpAddr(ins_jpaddr_rob_decoder),
-  .rs_full(valid_rs_decoder),
+  .rs_full(rs_full_public),
   .rob_tail(del_dep_decoder_rob),
   .RS_inst_valid(valid_rs_decoder),
   .RS_ins_Type(ins_type_rs_decoder),

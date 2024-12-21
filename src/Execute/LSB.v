@@ -9,10 +9,10 @@ module LSB #(
   input  wire					        rdy_in,			// ready signal, pause cpu when low
   input  wire clear_flag, // clear all data in LSB
 
-  // from ALU
-  input wire alu_ready,
-  input wire [4:0] alu_ROB_id,
-  input wire [31:0] alu_val,
+  // from RS
+  input wire rs_ready,
+  input wire [4:0] rs_ROB_id,
+  input wire [31:0] rs_val,
 
   // from ROB
   input wire ready_commit,
@@ -58,17 +58,17 @@ wire [4: 0] Qi_, Qj_;
 wire [31: 0] Vi_, Vj_;
 
 // determine input Qi 
-assign is_Qi_ = is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!alu_ready || Qi != alu_ROB_id);
-assign is_Qj_ = is_Qj && (!lsb_ready || Qj != lsb_ROB_id) && (!alu_ready || Qj != alu_ROB_id); 
+assign is_Qi_ = is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id);
+assign is_Qj_ = is_Qj && (!lsb_ready || Qj != lsb_ROB_id) && (!rs_ready || Qj != rs_ROB_id); 
 assign Qi_ = is_Qi ? Qi : 0;
 assign Qj_ = is_Qj ? Qj : 0;
 
 // determine input Vi, Vj
 assign Vi_ = lsb_ready && Qi == lsb_ROB_id ? lsb_val : 
-            alu_ready && Qi == alu_ROB_id ? alu_val : 
+            rs_ready && Qi == rs_ROB_id ? rs_val : 
             ins_value1;
 assign Vj_ = lsb_ready && Qj == lsb_ROB_id ? lsb_val : 
-            alu_ready && Qj == alu_ROB_id ? alu_val : 
+            rs_ready && Qj == rs_ROB_id ? rs_val : 
             ins_value2;
 
 reg valid[(1 << LSB_SIZE_BIT) - 1 : 0]; // exist elements
@@ -167,16 +167,16 @@ always @(posedge clk_in) begin
       lsb_imm[tail] <= imm;
     end
     // delete dependency
-    if (alu_ready) begin // result ok
+    if (rs_ready) begin // result ok
       // delete correspondant dependency 
       for (i = 0; i < LSB_SIZE; i = i + 1) begin 
-        if (lsb_Qi[i] == alu_ROB_id) begin
-          value1[i] <= alu_val;
+        if (lsb_Qi[i] == rs_ROB_id) begin
+          value1[i] <= rs_val;
           lsb_Qi[i] <= 0;
           _Qi[i] <= 0;
         end
-        if (lsb_Qj[i] == alu_ROB_id) begin
-          value2[i] <= alu_val;
+        if (lsb_Qj[i] == rs_ROB_id) begin
+          value2[i] <= rs_val;
           lsb_Qj[i] <= 0;
           _Qj[i] <= 0;
         end
@@ -185,12 +185,12 @@ always @(posedge clk_in) begin
     if (lsb_ready) begin
       for (i = 0; i < LSB_SIZE; i = i + 1) begin 
         if (lsb_Qi[i] == lsb_ROB_id) begin
-          value1[i] <= alu_val;
+          value1[i] <= rs_val;
           lsb_Qi[i] <= 0;
           _Qi[i] <= 0;
         end
         if (lsb_Qj[i] == lsb_ROB_id) begin
-          value2[i] <= alu_val;
+          value2[i] <= rs_val;
           lsb_Qj[i] <= 0;
           _Qj[i] <= 0;
         end

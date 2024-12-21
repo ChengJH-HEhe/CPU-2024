@@ -21,14 +21,10 @@ module RS #(
 
   output wire full,
 
-  output wire rs_ready, 
-  output wire [31 : 0] rs_val,
-  output wire [4 : 0] rs_ROB_id,
-
   // from ALU
-  input wire  alu_ready,
-  input wire [4:0] alu_ROB_id,
-  input wire [31:0] alu_val,
+  input wire  rs_ready,
+  input wire [4:0] rs_ROB_id,
+  input wire [31:0] rs_val,
 
   // to ALU
   output reg [6 : 0] alu_op ,
@@ -109,17 +105,17 @@ always @(posedge clk_in) begin
       _Qi[ready_add] <= Qi;
       _Qj[ready_add] <= Qj;
     end
-    if (alu_ready) begin // result ok
+    if (rs_ready) begin // result ok
       // delete correspondant dependency
       
       for (i = 0; i < RS_SIZE; i = i + 1) begin 
-        if (_Qi[i] == alu_ROB_id) begin
-          Vi[i] <= alu_val;
+        if (_Qi[i] == rs_ROB_id) begin
+          Vi[i] <= rs_val;
           _Qi[i] <= 0;
           _is_Qi[i] <= 0;
         end
-        if (_Qj[i] == alu_ROB_id) begin
-          Vj[i] <= alu_val;
+        if (_Qj[i] == rs_ROB_id) begin
+          Vj[i] <= rs_val;
           _Qj[i] <= 0;
           _is_Qj[i] <= 0;
         end

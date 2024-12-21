@@ -40,9 +40,18 @@ reg [2:0] state, total;
 //  4: stall (wait for lsb to respond)
 reg [2:0] status;
 always @(posedge clk_in) begin
-  total <= 3'b000;
   // case op 1,2,4
   if(rst_in) begin 
+    state <= 0;
+    status <= 0;
+    total <= 0;
+    ins <= 0;
+    ins_ready <= 0;
+    lsb_val_ready <= 0;
+    lsb_val <= 0;
+    ram_type <= 0;
+    addr_ram <= 0;
+    data_ram <= 0;
   end else if(~rdy_in) begin
   end else begin
     case(status)
@@ -66,9 +75,10 @@ always @(posedge clk_in) begin
         end else if(iCache_need) begin
           status <= 3'b011; // FETCH
           total <= 3'b100;
+          state <= 3'b000;
           addr_ram <= ins_addr;
           data_ram <= 8'b0;
-          ram_type <= 1'b1;
+          ram_type <= 1'b0;
         end else begin
           status <= 3'b0;
           total <= 3'b0;
@@ -92,7 +102,7 @@ always @(posedge clk_in) begin
             lsb_val[31:24] <= data_ram_in;
           end
         endcase
-        ram_type <= 1'b1;
+        ram_type <= 1'b0;
         if(state == total) begin
           lsb_val_ready <= 1'b1;
           status <= 3'b100;
@@ -122,7 +132,7 @@ always @(posedge clk_in) begin
         end
       end
       3'b010 : begin // store
-        ram_type <= 1'b0;
+        ram_type <= 1'b1;
         if(state != total) begin
           state <= state + 1;
           addr_ram <= addr_ram + 1;  
@@ -144,11 +154,11 @@ always @(posedge clk_in) begin
           lsb_val_ready <= 1'b0;
           status <= 3'b100; // STALL!
           state <= 3'b000;
-          addr_ram <= 32'b0;
           ram_type <= 1'b0;
         end
       end
       3'b011 : begin // FETCH
+        ram_type <= 1'b0;
         case(state)
           3'b001: ins[7:0] <= data_ram_in;
           3'b010: ins[15:8] <= data_ram_in;
@@ -156,13 +166,13 @@ always @(posedge clk_in) begin
           3'b100: ins[31:24] <= data_ram_in;
         endcase
         if(state == total) begin
-          ins_ready <= 1'b1;
           status <= 3'b100;
-          state <= 3'b000;
+          ins_ready <= 1'b1;
 
+          state <= 3'b000;
+          total <= 3'b000;
           addr_ram <= 32'b0;
           ram_type <= 1'b0;
-
         end else begin
           state <= state + 1;
           addr_ram <= addr_ram + 1;
