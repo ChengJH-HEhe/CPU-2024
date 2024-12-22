@@ -79,7 +79,7 @@ module RegFile (
       end
       if(new_reg_id) begin
         is_Qi[new_reg_id] <= 1;
-        Qi[new_reg_id] = new_ROB_id;
+        Qi[new_reg_id] <= new_ROB_id;
       end
     end
   end

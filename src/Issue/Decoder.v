@@ -27,9 +27,7 @@ module Decoder (
   output reg IFetcher_clear,
 
   // input from ROB
-  input wire ROB_ready,
   input wire [4: 0] rob_tail,
-  input wire [`ROB_WIDTH_BIT - 1: 0] ROB_del_Dep,
   input wire rob_full,
 
   // output to ROB
@@ -46,6 +44,7 @@ module Decoder (
   // output to RS
   output reg RS_inst_valid,
   output reg [`RS_TYPE - 1 : 0] RS_ins_Type,
+  output reg [31 : 0] RS_pc,
   // no QI -> is_qi = 0, qi = real_value,
   output wire [31 : 0] RS_ins_rs1,
   output wire [31 : 0] RS_ins_rs2,
@@ -79,6 +78,12 @@ module Decoder (
   input wire [`ROB_WIDTH_BIT - 1: 0] REGF_ret_ROB_id1,
   input wire [`ROB_WIDTH_BIT - 1: 0] REGF_ret_ROB_id2
 );
+// if instruction not ready, tell lsb/rob/rs valid <= 0
+
+reg _QI, _QJ;
+reg [4:0] QI, QJ;
+reg [31:0] last_addr;
+reg [31 : 0] rs1_val, rs2_val, lsb_imm, rs_imm;
 
 wire [31 : 0]real_ifetcher_pc = {pc[31 : 1], 1'b0};
 
@@ -106,7 +111,7 @@ wire [4:0] immI_star = ins[24:20];
 wire [11:0] immS = {ins[31:25], ins[11:7]};
 wire [11:0] immB = {ins[31], ins[7], ins[30:25], ins[11:8], 1'b0};
 wire [31:12] immU = ins[31:12];
-wire [20:1] immJ = {ins[31], ins[19:12], ins[20], ins[30:21], 1'b0};
+// wire [20:1] immJ = {ins[31], ins[19:12], ins[20], ins[30:21], 1'b0}; unused
 
 // _ represent boolean
 
@@ -120,15 +125,11 @@ wire _rs = (opcode == RISC_B || opcode == RISC_R || opcode == RISC_I);
 wire [3:0] lsb_op = {~opcode[5], funct3};
 wire _Jalr = opcode == JALR;
 
+
 // if last addr inst = now, now need to change 
 wire _change = ins_ready && (last_addr != real_ifetcher_pc);
 wire _work = (!_lsb || !lsb_full) && (!_rs || !rs_full) && !rob_full && (!_Jalr || !_QI);
 
-// if instruction not ready, tell lsb/rob/rs valid <= 0
-reg _QI, _QJ;
-reg [4:0] QI, QJ;
-reg [31:0] last_addr;
-reg [31 : 0] rs1_val, rs2_val, lsb_imm, rs_imm;
 
 always @(posedge clk_in) begin
   if(rst_in) begin
@@ -196,7 +197,6 @@ always @(posedge clk_in) begin
             3'b101: RS_ins_Type <= funct7[5]? `SRA : `SRL;
             3'b110: RS_ins_Type <= `OR;
             3'b111: RS_ins_Type <= `AND;
-            default: RS_ins_Type <= 5'b00000;
           endcase
         end else if(opcode == RISC_I) begin
           case(funct3)
@@ -208,7 +208,6 @@ always @(posedge clk_in) begin
             3'b101: RS_ins_Type <= funct7[5]? `SRAI : `SRLI;
             3'b110: RS_ins_Type <= `ORI;
             3'b111: RS_ins_Type <= `ANDI;
-            default: RS_ins_Type <= 5'b00000;
           endcase
         end
         else if(opcode == RISC_B) begin
@@ -222,7 +221,6 @@ always @(posedge clk_in) begin
             default: RS_ins_Type <= 5'b00000;
           endcase
         end 
-        // reg <=       
 
         rs_imm <= opcode == RISC_I ?((funct3 == 3'b001 || funct3 == 3'b101)? immI_star : immI) : opcode == RISC_B? immB :  32'b0;
         lsb_imm <= opcode == RISC_L ? immI : immS;
@@ -239,6 +237,9 @@ always @(posedge clk_in) begin
         ROB_inst_ready <= opcode == JAL || opcode == JALR || opcode == LUI || opcode == AUIPC;
         ROB_ins_rd <= rd;
         ROB_ins_Addr <= real_ifetcher_pc;
+
+        RS_pc <= real_ifetcher_pc;
+        
         // jump addr estimated by ROB
         case(opcode)
           JAL: begin
@@ -257,7 +258,6 @@ always @(posedge clk_in) begin
           end
         endcase
       end
-
     end 
   end
 end

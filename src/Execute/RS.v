@@ -18,6 +18,9 @@ module RS #(
   input wire is_Qj,
   input wire [4 : 0] Qi,
   input wire [4 : 0] Qj,
+  input wire [31 : 0] Imm_in,
+  input wire [31 : 0] Pc_in,
+  input wire [4 : 0] ROB_id,
 
   output wire full,
 
@@ -88,6 +91,8 @@ always @(posedge clk_in) begin
       value1[i] <= 0;
       rs1[i] <= 0;
       value2[i] <= 0;
+      Rd[i] <= 0;
+      Pc[i] <= 0;
       rs2[i] <= 0;
       _is_Qi[i] <= 0;
       _is_Qj[i] <= 0;
@@ -104,6 +109,9 @@ always @(posedge clk_in) begin
       _is_Qj[ready_add] <= is_Qj;
       _Qi[ready_add] <= Qi;
       _Qj[ready_add] <= Qj;
+      Imm[ready_add] <= Imm_in;
+      Rd[ready_add] <= ROB_id;
+      Pc[ready_add] <= Pc_in;
     end
     if (rs_ready) begin // result ok
       // delete correspondant dependency

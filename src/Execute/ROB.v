@@ -22,8 +22,6 @@ module ReorderBuffer #(
         // newly add_dep
         output wire [4 : 0] rob_tail,
         output wire rob_full,
-        // to lsb_head
-        output wire [4 : 0] rob_head,
         
         // from RS execute end.
         input wire rs_is_set,
@@ -57,10 +55,10 @@ module ReorderBuffer #(
         output reg [31:0] pc_fact,
 
         // (TODO) rs1, rs2, same as rd? 
-        output wire ready_commit
+        output wire ready_commit // commit id
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
-
+    reg [31 : 0] commit_times;
 
     reg ready[0 : ROB_SIZE - 1];
     reg busy[0 : ROB_SIZE - 1];
@@ -72,11 +70,12 @@ module ReorderBuffer #(
     reg [31 : 0] jpAddr[0 : ROB_SIZE - 1];
 
     reg [`ROB_WIDTH_BIT - 1 : 0] head, tail;
-    integer i;
+    integer i, file;
 
     always @(posedge clk_in) begin
         if (rst_in || (clear_flag && rdy_in)) begin
             clear_flag <= 0;
+            commit_times <= 0;
             head <= 0;
             tail <= 0;
             pc_fact <= 0;
@@ -117,6 +116,11 @@ module ReorderBuffer #(
                 busy[head] <= 0;
                 ready[head] <= 0;
                 // TODO commit head TypeBr
+                commit_times <= commit_times + 1;
+                file = $fopen("ROB_debug.txt", "a");
+                $display("commit_id = [%d]: addr = [%h] value = [%h]", commit_times, insAddr[head], value[head]);
+
+                // outut 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
                     if (value[head][0] ^ jpAddr[head][0]) begin
@@ -131,14 +135,14 @@ module ReorderBuffer #(
     assign rob_full = (head == tail && busy[head]) || (tail + 5'b1 == head && inst_valid && !ready[head]);
     // 
     // assign empty = head == tail && !busy[head];
-
     // to RegFile commit.
     wire commit = busy[head] && ready[head] && rdy_in && insType[head] == `TypeRd;
     assign ready_commit = commit;
     assign write_reg_id = commit ? rd[head] : 0;
     assign write_val = commit ? value[head] : 0;
     assign write_ROB_id = commit ? head : 0;
-
+    assign rob_tail = tail;
+    
     // to RegFile new tail.
     wire new_element = rdy_in && inst_valid && ins_Type == `TypeRd;
     assign new_reg_id = new_element ? ins_rd : 0;

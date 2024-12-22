@@ -43,19 +43,19 @@ module LSB #(
 
   output reg lsb_ready, // val is valid
   output reg [4 : 0] lsb_ROB_id,
-  output reg [31 : 0] lsb_val
+  output reg [31 : 0] lsb_val,
+  output wire lsb_full
 );
 localparam LSB_SIZE = 1 << LSB_SIZE_BIT;
-wire full;
-
-assign full = head == tail + 1;
-
 reg [LSB_SIZE_BIT - 1 : 0] head, tail;
 reg [1 : 0] ticker;
-
 wire is_Qi_, is_Qj_;
 wire [4: 0] Qi_, Qj_;
 wire [31: 0] Vi_, Vj_;
+wire full;
+
+assign full = head == tail + 1;
+assign lsb_full = full;
 
 // determine input Qi 
 assign is_Qi_ = is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id);
@@ -118,7 +118,7 @@ always @(posedge clk_in) begin
         if (valid[head] && _Qi[head] == 0 && _Qj[head] == 0 && ready_commit && commit_id == rd[head]) begin
             full_mem <= 1; // to mem is full.
             head <= head + 1;
-            addr <= value1[head] + imm[head];
+            addr <= value1[head] + lsb_imm[head];
             data <= value2[head];
             valid[head] <= 0;
             op <= (Type[head] >= `LB && Type[head] <= `LHU)? 1 : 2;

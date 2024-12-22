@@ -1,14 +1,17 @@
 `include "const.v"
 
 module IFetcher (
-    input wire stall, // pause
     input  wire                 clk_in,			// system clock signal
     input  wire                 rst_in,			// reset signal
     input  wire					rdy_in,			// ready signal, pause cpu when low
-
+    
     input wire [31 : 0] input_ins,
     input wire input_ins_ready,
     
+    input wire stall, // pause
+    input wire jalr_clear, // clear
+    input wire [31:0] jalr_pc,
+
     // icache
     output reg [31 : 0] to_Cache_pc,
     output reg fetch_able,
@@ -54,6 +57,12 @@ always @(posedge clk_in) begin
         output_ins_ready <= 1'b0;
         to_Cache_pc <= 1'b0;
         pc <= br_pc;
+        state <= 1'b0;
+    end else if(jalr_clear) begin
+        fetch_able <= 1'b0;
+        output_ins_ready <= 1'b0;
+        to_Cache_pc <= 1'b0;
+        pc <= jalr_pc;
         state <= 1'b0;
     end else if(state == 1'b0) begin
         // ready to fetch
