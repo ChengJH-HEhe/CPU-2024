@@ -205,8 +205,8 @@ IFetcher ifetcher(
   .branch_pc(branch_pc_bp_ifetcher),
   .predict_pc(predict_pc_ifetcher_bp),
   .predict_nxt_pc(predict_pc_decoder_ifetcher),
-  .jalr_reset(clear_flag_rob_public),
-  .jalr_pc(pc_fact_rob_public)
+  .br_reset(clear_flag_rob_public),
+  .br_pc(pc_fact_rob_public)
 );
 
 RS rs(

@@ -243,8 +243,6 @@ always @(posedge clk_in) begin
         case(opcode)
           JAL: begin
             ROB_ins_value <= real_ifetcher_pc + 4;
-            IFetcher_clear <= 1; // definitely lost.
-            IFetcher_new_addr <= real_ifetcher_pc + immJ;
           end
           JALR: begin
             ROB_ins_value <= real_ifetcher_pc + 4;
@@ -252,7 +250,7 @@ always @(posedge clk_in) begin
             IFetcher_new_addr <= (rs1_val + {{20{immI[10]}}, immI}) & ~32'b1;
           end
           LUI: ROB_ins_value <= {immU, 12'b0};
-          AUIPC: ROB_ins_value <= {real_ifetcher_pc[31:1],1'b0} + {immU, 12'b0};
+          AUIPC: ROB_ins_value <= real_ifetcher_pc + {immU, 12'b0};
           RISC_B: begin
             //[pc] is branch , predict_pc result in b-predictor? 
             ROB_ins_jpAddr <= predict_nxt_pc;

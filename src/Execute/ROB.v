@@ -17,7 +17,9 @@ module ReorderBuffer #(
         input wire [31 : 0] ins_Addr,
         input wire [31 : 0] ins_jpAddr,
         
-        // to Decoder TODO
+        // to Decoder
+
+        // newly add_dep
         output wire [4 : 0] rob_tail,
         output wire rob_full,
         // to lsb_head
@@ -50,12 +52,12 @@ module ReorderBuffer #(
         output wire rs2_ready,
         output wire [31 : 0] rs2_val,
 
-        output reg clear_flag,
         // actual jump pc ifetcher?
+        output reg clear_flag,
         output reg [31:0] pc_fact,
 
-        output wire ready_commit
         // (TODO) rs1, rs2, same as rd? 
+        output wire ready_commit
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
 
@@ -101,7 +103,7 @@ module ReorderBuffer #(
             // new inst , push tail
             if(inst_valid) begin
                 // inst_valid, inst_ready, ins_value, ins_rd, ins_Type, ins_Addr, ins_jpAddr,
-                tail <= tail + 1 == ROB_SIZE ? 0 : tail + 1;
+                tail <= tail + 1;
                 busy[tail] <= 1;
                 ready[tail] <= inst_ready;
                 value[tail] <= ins_value;
@@ -111,7 +113,7 @@ module ReorderBuffer #(
                 rd[tail] <= ins_rd;
             end
             if(busy[head] && ready[head]) begin
-                head <= head + 1 == ROB_SIZE ? 0 : head + 1;
+                head <= head + 1;
                 busy[head] <= 0;
                 ready[head] <= 0;
                 // TODO commit head TypeBr
