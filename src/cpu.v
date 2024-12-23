@@ -122,6 +122,9 @@ wire rdy_commit_public;
 wire clear_ifetcher_decoder;
 wire [31:0] pc_ifetcher_decoder;
 
+wire [31 : 0] pc_rs_decoder;
+wire [31 : 0] ins_pc_ifetcher_icache;
+
 LSB lsb(
   .clk_in(clk_in),
   .rst_in(rst_in),
@@ -189,7 +192,8 @@ ICache icache(
   .fetch_able(fetch_able_icache_ifetcher),
   .input_pc(cache_pc_icache_ifetcher),
   .hit(rdy_ifetcher_icache),
-  .hit_ins(input_ins_ifetcher_icache)
+  .hit_ins(input_ins_ifetcher_icache),
+  .ins_pc(ins_pc_ifetcher_icache)
 );
 
 IFetcher ifetcher(
@@ -211,9 +215,12 @@ IFetcher ifetcher(
   .predict_pc(predict_pc_ifetcher_bp),
   .predict_nxt_pc(predict_pc_decoder_ifetcher),
   .br_reset(clear_flag_rob_public),
-  .br_pc(pc_fact_rob_public)
+  .br_pc(pc_fact_rob_public),
+  .ins_pc(ins_pc_ifetcher_icache)
 );
-wire [31 : 0] pc_rs_decoder;
+
+
+
 RS rs(
   .clk_in(clk_in),
   .rst_in(rst_in),

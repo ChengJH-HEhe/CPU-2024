@@ -4,7 +4,7 @@
 `define RS_WIDTH_BIT 3
 `define RS_WIDTH (1 << `RS_WIDTH_BIT)
 
-`define LSB_TYPE 3
+`define LSB_TYPE 4
 `define LSB_WIDTH_BIT 3
 
 

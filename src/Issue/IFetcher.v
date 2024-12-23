@@ -6,6 +6,7 @@ module IFetcher (
     input  wire					rdy_in,			// ready signal, pause cpu when low
     
     input wire [31 : 0] input_ins,
+    input wire [31 : 0] ins_pc,
     input wire input_ins_ready,
     
     input wire stall, // pause
@@ -81,13 +82,17 @@ always @(posedge clk_in) begin
         // is waiting
         if(~stall && input_ins_ready) begin
             // instruction ready, special : JAL
+            // $display("ins_pc = %d, immJ = %d", pc, immJ);
             if(input_ins[6:0] == JAL) begin
                 pc <= pc + immJ;
-                predict_nxt_pc <= pc + immJ;
+                predict_nxt_pc <= pc + immJ; // inform the decoder of predictor result
             end else begin
                 pc <= predict_pc; // next_circle
                 predict_nxt_pc <= predict_pc;
             end
+
+            fetch_able <= 0;
+
             output_ins <= input_ins;
             output_ins_ready <= 1'b1;
 

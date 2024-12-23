@@ -166,9 +166,6 @@ always @(posedge clk_in) begin
     if(rdy_in) begin
       // decode try to map opcode, next circle issue? no! one-circle.
       // if ins_ready, decode ins
-      ROB_inst_valid <= 0;
-      RS_inst_valid <= 0;
-      LSB_ins_valid <= 0;
       if(_change && _work) begin
         // ROB/LSB/RS_INS_TYPE
         case(opcode) 
@@ -257,6 +254,10 @@ always @(posedge clk_in) begin
             ROB_ins_jpAddr <= predict_nxt_pc;
           end
         endcase
+      end else begin
+        ROB_inst_valid <= 1'b0;
+        RS_inst_valid <= 1'b0;
+        LSB_ins_valid <= 1'b0;
       end
     end 
   end

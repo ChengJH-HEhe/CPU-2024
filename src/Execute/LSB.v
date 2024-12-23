@@ -21,7 +21,7 @@ module LSB #(
   // receive from Decoder (ins_info)
   
   input wire ins_valid,
-  input wire [LSB_TYPE_BIT - 1 : 0] ins_Type, // b,h,w / s,l 
+  input wire [LSB_TYPE_BIT : 0] ins_Type, // b,h,w / s,l 
   input wire [31 : 0] ins_value1,
   input wire [4 : 0] ins_rd, // rob_id,
   input wire [31 : 0] ins_value2,

@@ -55,7 +55,8 @@ module ReorderBuffer #(
         output reg [31:0] pc_fact,
 
         // (TODO) rs1, rs2, same as rd? 
-        output wire ready_commit // commit id
+        output wire ready_commit, // commit id
+        input wire lsb_head_complete
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
     reg [31 : 0] commit_times;
@@ -118,7 +119,7 @@ module ReorderBuffer #(
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
                 file = $fopen("ROB_debug.txt", "a");
-                $display("commit_id = [%d]: addr = [%h] value = [%h]", commit_times, insAddr[head], value[head]);
+                $fdisplay(file, "commit_id = [%d]: addr = [%h] value = [%h]", commit_times, insAddr[head], value[head]);
 
                 // outut 
                 if (insType[head] == `TypeBr) begin
@@ -137,7 +138,8 @@ module ReorderBuffer #(
     // assign empty = head == tail && !busy[head];
     // to RegFile commit.
     wire commit = busy[head] && ready[head] && rdy_in && insType[head] == `TypeRd;
-    assign ready_commit = commit;
+    assign ready_commit = busy[head] && ready[head] && rdy_in;
+     // with lsb when commit ends, reset to zero
     assign write_reg_id = commit ? rd[head] : 0;
     assign write_val = commit ? value[head] : 0;
     assign write_ROB_id = commit ? head : 0;
