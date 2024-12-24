@@ -272,11 +272,12 @@ ALU alu(
   .rd_out(rs_rob_id_public),
   .res(rs_val_public)
 );
-
+wire regF_print;
 ReorderBuffer rob(
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
+  .regF_print(regF_print),
   .inst_valid(valid_rob_decoder),
   .inst_ready(rdy_rob_decoder),
   .ins_value(ins_value_rob_decoder),
@@ -321,6 +322,7 @@ RegFile u_RegFile(
   .clk_in       	( clk_in        ),
   .rst_in       	( rst_in        ),
   .rdy_in       	( rdy_in        ),
+  .regF_print(regF_print),
   .clear_flag   	( clear_flag_rob_public    ),
   .ask_reg_id1  	( ask_id1_regf_decoder   ),
   .ask_reg_id2  	( ask_id2_regf_decoder   ),

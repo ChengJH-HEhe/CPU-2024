@@ -81,34 +81,34 @@ wire [31:0] imm_rd = {{20{imm[11]}}, imm[11:0]};
         res = ($signed(Vi) < $signed(imm_rd)) ? 1 : 0;
       end
       `SLTIU: begin
-        res = (Vi < imm) ? 1 : 0;
+        res = (Vi < imm_rd) ? 1 : 0;
       end
       `BEQ: begin
         // if(Vi == Vj) begin
         //   jpp = 1;
         // end
-          res = pc + ((Vi == Vj)? imm + 1 : 4);
+          res = pc + ((Vi == Vj)? imm_rd + 1 : 4);
       end
       `BNE: begin
-          res = pc + ((Vi != Vj)? imm + 1 : 4);
+          res = pc + ((Vi != Vj)? imm_rd + 1 : 4);
       end
       `BLT: begin
-          res = pc + ($signed(Vi) < $signed(Vj)? imm + 1 : 4);
+          res = pc + ($signed(Vi) < $signed(Vj)? imm_rd + 1 : 4);
       end
       `BGE: begin
-          res = pc + ($signed(Vi) >= $signed(Vj)? imm + 1 : 4);
+          res = pc + ($signed(Vi) >= $signed(Vj)? imm_rd + 1 : 4);
       end
       `BLTU: begin
-          res = pc + ((Vi < Vj)? imm + 1 : 4);
+          res = pc + ((Vi < Vj)? imm_rd + 1 : 4);
       end
       `BGEU: begin
-          res = pc + ((Vi >= Vj)? imm + 1 : 4);
+          res = pc + ((Vi >= Vj)? imm_rd + 1 : 4);
       end
       default: begin
         res = 0;
       end
     endcase
-    if(pc != 0)
-      $display("pc=%d op=%d imm=%d, res=%h", pc, alu_op, imm_rd, res);
+    // if(pc != 0)
+    //   $display("pc=%d op=%d imm=%d, res=%h", pc, alu_op, imm_rd, res);
   end
 endmodule

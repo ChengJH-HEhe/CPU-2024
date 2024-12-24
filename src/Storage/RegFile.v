@@ -33,9 +33,9 @@ module RegFile (
 
   output wire [`ROB_WIDTH_BIT - 1 : 0] rs2_id,
   input wire rs2_ready,
-  input wire [31 : 0] rs2_val
+  input wire [31 : 0] rs2_val,
   // RS op1, op2, free dependency? 
-  
+  input wire regF_print
 );
   reg [31:0] regs[0:31];
   reg [`ROB_WIDTH_BIT-1:0] Qi[0:31];
@@ -45,7 +45,7 @@ module RegFile (
   // case 1: Qi in reg
   // case 2: Qi in new_reg_id
   // case 3: Qi ready in rob
-  
+
   wire has_dep_id1 = is_Qi[ask_reg_id1] || (new_reg_id && ask_reg_id1 == new_reg_id);
   wire has_dep_id2 = is_Qi[ask_reg_id2] || (new_reg_id && ask_reg_id2 == new_reg_id);
 
@@ -72,7 +72,14 @@ module RegFile (
       end
     end else if (!rdy_in) begin
     end else begin
-      
+      if(regF_print) begin
+        file = $fopen("debug.txt","a");
+        for(i = 0; i < 32; i = i + 1) begin
+          $fwrite(file, "%d", regs[i]);
+        end
+        $fwrite(file, "\n");
+        $fclose(file);
+      end
       if(clear_flag) begin
         for(i = 0; i < 32; i = i + 1) begin
           Qi[i] <= 0;
@@ -81,11 +88,6 @@ module RegFile (
       end else begin
         if(write_reg_id) begin
           write_times <= write_times + 1;
-          // file = $fopen("debug.txt","a");
-          // $fwrite(file, "%d\t", write_times);
-          // #1;
-          // $fwrite(file, "regs[%d] : %d <= %d; \n",write_reg_id, regs[write_reg_id] , write_val);
-          // $fclose(file);
           regs[write_reg_id] <= write_val;
           if(write_reg_id != new_reg_id && Qi[write_reg_id] == write_ROB_id) begin
             is_Qi[write_reg_id] <= 0;

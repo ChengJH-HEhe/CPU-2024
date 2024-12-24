@@ -169,7 +169,7 @@ always @(posedge clk_in) begin
       _Qj[tail] <= is_Qj_;
       lsb_Qi[tail] <= Qi_;
       lsb_Qj[tail] <= Qj_;
-      lsb_imm[tail] <= imm;
+      lsb_imm[tail] <= {{20{imm[11]}}, imm[11:0]};
       // $display("rs1=%d rs2=%d imm=%d", Vi_, Vj_, imm);
     end
     // delete dependency

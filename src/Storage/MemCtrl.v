@@ -71,7 +71,7 @@ always @(posedge clk_in) begin
             2'b10 : total <= 3'b100;
           endcase
           addr_ram <= addr;
-          data_ram <= data;
+          data_ram <= op[3] ? data[7:0] : 8'b0;
         end else if(iCache_need) begin
           status <= 3'b011; // FETCH
           total <= 3'b100;
@@ -125,7 +125,6 @@ always @(posedge clk_in) begin
                 lsb_val[31:16] <= 16'b0;
             endcase
           end
-
         end else begin
           state <= state + 1;
           addr_ram <= addr_ram + 1;
@@ -135,25 +134,18 @@ always @(posedge clk_in) begin
         ram_type <= 1'b1;
         if(state != total) begin
           state <= state + 1;
-          addr_ram <= addr_ram + 1;  
+          addr_ram <= (state + 1 == total) ? 32'b0 : addr_ram + 1;  
           case(state)
-            3'b001 :begin
-              data_ram <= data[7:0];
-            end
-            3'b010 :begin
-              data_ram <= data[15:8];
-            end
-            3'b011 :begin
-              data_ram <= data[23:16];
-            end
-            3'b100 :begin
-              data_ram <= data[31:24];
-            end
+            3'b000 : data_ram <= data[15:8];
+            3'b001 : data_ram <= data[23:16];
+            3'b010 : data_ram <= data[31:24];
+            3'b011 : data_ram <= 8'b0;
           endcase
         end else begin
           lsb_val_ready <= 1'b1;
           status <= 3'b100; // STALL!
           state <= 3'b000;
+          data_ram <= 8'b0;
           ram_type <= 1'b0;
         end
       end

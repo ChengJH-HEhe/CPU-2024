@@ -56,7 +56,9 @@ module ReorderBuffer #(
         // (TODO) rs1, rs2, same as rd? 
         output wire ready_commit, // commit id
         output wire rob_head_l_or_s,
-        output wire [4:0] rob_head
+        output wire [4:0] rob_head,
+
+        output reg regF_print
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
     reg [31 : 0] commit_times;
@@ -72,11 +74,15 @@ module ReorderBuffer #(
 
     reg [`ROB_WIDTH_BIT - 1 : 0] head, tail;
 
+    
+
     assign rob_head = head;
 
     integer i, file;
 
     always @(posedge clk_in) begin
+        regF_print <= 0;
+
         if (rst_in || (clear_flag && rdy_in)) begin
             clear_flag <= 0;
             if(rst_in) begin
@@ -124,6 +130,7 @@ module ReorderBuffer #(
                 ready[head] <= 0;
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
+                regF_print <= 1;
                 file = $fopen("debug.txt","a");
                 $fwrite(file, "commit_id = [%d]: type = [%b] addr = [%d] value = [%h]\n", 
                  commit_times, insType[head], insAddr[head], value[head]);
@@ -132,7 +139,7 @@ module ReorderBuffer #(
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
                     if (value[head][0] ^ jpAddr[head][0]) begin
-                        $display("pc=%h actu:%h, pred:%h", insAddr[head], value[head], jpAddr[head]);
+                        // $display("pc=%h actu:%h, pred:%h", insAddr[head], value[head], jpAddr[head]);
                         pc_fact <= value[head];
                         clear_flag <= 1;
                     end
@@ -148,7 +155,8 @@ module ReorderBuffer #(
     // to RegFile commit.
     wire ready_head = ready[head];
     assign ready_commit = busy[head] && ready_head && rdy_in;
-    wire commit = busy[head] && ready[head] && rdy_in && (insType[head] == `TypeRd || insType[head] == `TypeLd);
+    
+    wire commit = busy[head] && ready_head && rdy_in && (insType[head] == `TypeRd || insType[head] == `TypeLd);
      // with lsb when commit ends, reset to zero
     assign write_reg_id = commit ? rd[head] : 0;
     assign write_val = commit ? value[head] : 0;
