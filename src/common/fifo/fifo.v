@@ -88,7 +88,7 @@ initial begin: READ_INPUT_FROM_FILE
     else begin
       init_size = $fread(q_data_array, fd, 0, 2**ADDR_BITS);
       if (!$feof(fd)) begin
-        $display("Error: Input is too large. Try increase the ADDR_BITS parameter.");
+        // $display("Error: Input is too large. Try increase the ADDR_BITS parameter.");
         $finish(0);
       end
       $fclose(fd);

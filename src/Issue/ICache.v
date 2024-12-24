@@ -53,14 +53,14 @@ always @(posedge clk_in) begin
   end
   else if(fetch_able) begin
     // if(ins_pc == 32'hcc)
-    //   $display("[%d] hit=%d, valid=%d, tag=%d, ins_pc=%d", ins_pc, hit, ins_id, valid[ins_id], tag[ins_id], input_pc[`TAG_INTERVAL]);
+    //   // $display("[%d] hit=%d, valid=%d, tag=%d, ins_pc=%d", ins_pc, hit, ins_id, valid[ins_id], tag[ins_id], input_pc[`TAG_INTERVAL]);
     case (state)
       0: begin
         if (~hit) begin
           state <= 1;
           need_mem <= 1;
           mem_addr <= input_pc;
-          // $display("addr <= %d", input_pc);
+          // // $display("addr <= %d", input_pc);
         end
       end
       1: begin
@@ -71,7 +71,7 @@ always @(posedge clk_in) begin
           tag[mem_sub] <= mem_tag;
           valid[mem_sub] <= 1;
           mem_addr <= 0;
-          // $display("addr=%d,valid[%d]=1", ins_pc, mem_sub);
+          // // $display("addr=%d,valid[%d]=1", ins_pc, mem_sub);
         end
       end
     endcase

@@ -10,13 +10,13 @@
 
 `define ROB_TYPE 3
 
-`define TypeJp  3'b0
-`define TypeLd  3'b1
-`define TypeBr  3'b10
-`define TypeRd  3'b11
-`define TypeSt 3'b100
+`define TypeJp  3'b000
+`define TypeLd  3'b001
+`define TypeBr  3'b010
+`define TypeRd  3'b011
+`define TypeSt  3'b100
 
-`define RS_TYPE 5
+`define RS_TYPE 6
 
 // GENERATE ALL OPCODE TO 1,2,...32.
 // ADD SUB AND OR XOR SLL SRL SRA SLT SLTU ADDI ANDI ORI XORI SLLI

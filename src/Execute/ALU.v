@@ -17,6 +17,7 @@ module ALU (
   output reg valid // ready
 
 );
+wire [31:0] imm_rd = {{20{imm[11]}}, imm[11:0]};
   always @(*) begin
     rd_out = rd_in;
     valid = (alu_op > 0);
@@ -55,17 +56,17 @@ module ALU (
         res = (Vi < Vj) ? 1 : 0;
       end
       `ADDI: begin
-        res = Vi + {{20{imm[11]}}, imm};
-        $display("ADDI Vi=%d Vj=%d", Vi, {{20{imm[11]}}, imm});
+        res = Vi + imm_rd;
+        // $display("ADDI Vi=%d Vj=%d", Vi, {{20{imm[11]}}, imm});
       end
       `ANDI: begin
-        res = Vi & {{20{imm[11]}}, imm};
+        res = Vi & imm_rd;
       end
       `ORI: begin
-        res = Vi | {{20{imm[11]}}, imm};
+        res = Vi | imm_rd;
       end
       `XORI: begin
-        res = Vi ^ {{20{imm[11]}}, imm};
+        res = Vi ^ imm_rd;
       end
       `SLLI: begin
         res = Vi << imm[4:0];
@@ -77,7 +78,7 @@ module ALU (
         res = $signed(Vi) >>> imm[4:0];
       end
       `SLTI: begin
-        res = ($signed(Vi) < $signed(imm)) ? 1 : 0;
+        res = ($signed(Vi) < $signed(imm_rd)) ? 1 : 0;
       end
       `SLTIU: begin
         res = (Vi < imm) ? 1 : 0;
@@ -86,26 +87,28 @@ module ALU (
         // if(Vi == Vj) begin
         //   jpp = 1;
         // end
-          res = pc + (Vi == Vj)? imm + 1 : 4;
+          res = pc + ((Vi == Vj)? imm + 1 : 4);
       end
       `BNE: begin
-          res = pc + (Vi != Vj)? imm + 1 : 4;
+          res = pc + ((Vi != Vj)? imm + 1 : 4);
       end
       `BLT: begin
-          res = pc + $signed(Vi) < $signed(Vj)? imm + 1 : 4;
+          res = pc + ($signed(Vi) < $signed(Vj)? imm + 1 : 4);
       end
       `BGE: begin
           res = pc + ($signed(Vi) >= $signed(Vj)? imm + 1 : 4);
       end
       `BLTU: begin
-          res = pc + (Vi < Vj)? imm + 1 : 4;
+          res = pc + ((Vi < Vj)? imm + 1 : 4);
       end
       `BGEU: begin
-          res = pc + (Vi >= Vj)? imm + 1 : 4;
+          res = pc + ((Vi >= Vj)? imm + 1 : 4);
       end
       default: begin
         res = 0;
       end
     endcase
+    if(pc != 0)
+      $display("pc=%d op=%d imm=%d, res=%h", pc, alu_op, imm_rd, res);
   end
 endmodule

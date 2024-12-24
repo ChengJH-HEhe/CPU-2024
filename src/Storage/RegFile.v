@@ -41,9 +41,13 @@ module RegFile (
   reg [`ROB_WIDTH_BIT-1:0] Qi[0:31];
   reg is_Qi[0:31];
 
-  // ask ROB for dependency.(may be rs1_val if it's just calced)
-  wire has_dep_id1 = is_Qi[ask_reg_id1] || new_reg_id && ask_reg_id1 == new_reg_id;
-  wire has_dep_id2 = is_Qi[ask_reg_id2] || new_reg_id && ask_reg_id2 == new_reg_id;
+  // ROB ask for dependency.
+  // case 1: Qi in reg
+  // case 2: Qi in new_reg_id
+  // case 3: Qi ready in rob
+  
+  wire has_dep_id1 = is_Qi[ask_reg_id1] || (new_reg_id && ask_reg_id1 == new_reg_id);
+  wire has_dep_id2 = is_Qi[ask_reg_id2] || (new_reg_id && ask_reg_id2 == new_reg_id);
 
   assign ret_ROB_id1 = ask_reg_id1 == new_reg_id ? new_ROB_id : Qi[ask_reg_id1];
   assign ret_ROB_id2 = ask_reg_id2 == new_reg_id ? new_ROB_id : Qi[ask_reg_id2];
@@ -55,9 +59,12 @@ module RegFile (
   assign rs1_id = ret_ROB_id1;
   assign rs2_id = ret_ROB_id2;
 
+  integer file;
+  reg [31 : 0] write_times;
   always @(posedge clk_in) begin : MainBlock
     integer i;
     if(rst_in) begin
+      write_times <= 0;
       for(i = 0; i < 32; i = i + 1) begin
         regs[i] <= 0;
         Qi[i] <= 0;
@@ -73,19 +80,22 @@ module RegFile (
         end
       end else begin
         if(write_reg_id) begin
+          write_times <= write_times + 1;
+          // file = $fopen("debug.txt","a");
+          // $fwrite(file, "%d\t", write_times);
+          // #1;
+          // $fwrite(file, "regs[%d] : %d <= %d; \n",write_reg_id, regs[write_reg_id] , write_val);
+          // $fclose(file);
           regs[write_reg_id] <= write_val;
           if(write_reg_id != new_reg_id && Qi[write_reg_id] == write_ROB_id) begin
             is_Qi[write_reg_id] <= 0;
             Qi[write_reg_id] <= 0;
           end
-          // for(i = 0; i < 32; i = i + 1) begin
-          //   $write("%d\t", regs[i]);
-          // end
-          $display("");
         end
         if(new_reg_id) begin
           is_Qi[new_reg_id] <= 1;
           Qi[new_reg_id] <= new_ROB_id;
+          
         end
       end
 

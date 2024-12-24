@@ -103,7 +103,7 @@ module ReorderBuffer #(
             end 
             if(lsb_is_set) begin
                 ready[lsb_set_id] <= 1;
-                $display("lsb_[%d] is ready", lsb_set_id);
+                // $display("lsb_[%d] is ready", lsb_set_id);
                 value[lsb_set_id] <= lsb_set_val;
             end
             // new inst , push tail
@@ -124,13 +124,16 @@ module ReorderBuffer #(
                 ready[head] <= 0;
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
-                $display("commit_id = [%d]: type = [%b] addr = [%d] value = [%h]", 
+                file = $fopen("debug.txt","a");
+                $fwrite(file, "commit_id = [%d]: type = [%b] addr = [%d] value = [%h]\n", 
                  commit_times, insType[head], insAddr[head], value[head]);
+                $fclose(file);
                 // output 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
                     if (value[head][0] ^ jpAddr[head][0]) begin
-                        pc_fact <= {value[head][31:1], 1'b0};
+                        $display("pc=%h actu:%h, pred:%h", insAddr[head], value[head], jpAddr[head]);
+                        pc_fact <= value[head];
                         clear_flag <= 1;
                     end
                 end     

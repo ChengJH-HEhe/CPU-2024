@@ -293,7 +293,7 @@ always @*
             if (!io_in_empty) begin
               io_in_rd_en = 1'b1;
             end
-            // $display("IO:in:%c",io_dout);
+            // // $display("IO:in:%c",io_dout);
             if (!rx_empty && !io_in_full) begin
               rd_en   = 1'b1;
               d_io_in_wr_data = rd_data;

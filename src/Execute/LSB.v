@@ -146,7 +146,7 @@ always @(posedge clk_in) begin
           // head op returns
           // result ready
           lsb_ready <= 1;
-          $display("Store[%d] ready", head);
+          // $display("Store[%d] ready", head);
           lsb_val <= 0;
           full_mem <= 0;
           ticker <= 2'b00;
@@ -160,7 +160,7 @@ always @(posedge clk_in) begin
       tail <= tail + 1;
       valid[tail] <= 1; // exist elements
       Type[tail] <= ins_Type; 
-      $display("Type = %h", ins_Type);
+      // $display("Type = %h", ins_Type);
       // b,h,w / s,l 
       value1[tail] <= Vi_;
       rd[tail] <= ins_rd;
@@ -170,7 +170,7 @@ always @(posedge clk_in) begin
       lsb_Qi[tail] <= Qi_;
       lsb_Qj[tail] <= Qj_;
       lsb_imm[tail] <= imm;
-      $display("rs1=%d rs2=%d imm=%d", Vi_, Vj_, imm);
+      // $display("rs1=%d rs2=%d imm=%d", Vi_, Vj_, imm);
     end
     // delete dependency
     if (rs_ready) begin // result ok
