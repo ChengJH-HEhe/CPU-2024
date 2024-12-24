@@ -24,11 +24,7 @@ module RS #(
 
   output wire full,
 
-  // from ALU
-  input wire  rs_ready,
-  input wire [4:0] rs_ROB_id,
-  input wire [31:0] rs_val,
-
+  
   // to ALU
   output reg [6 : 0] alu_op ,
   output reg [31 : 0] Vi ,
@@ -40,11 +36,13 @@ module RS #(
   // from LSB calc ready direct update
   input wire lsb_ready,
   input wire [4:0]lsb_rob_id,
-  input wire [31:0] lsb_val
+  input wire [31:0] lsb_val,
+  // from ALU
+  input wire  rs_ready,
+  input wire [4:0] rs_ROB_id,
+  input wire [31:0] rs_val
 
   // to Decoder
-
-  // 
 );
 
 localparam RS_SIZE = 1 << RS_SIZE_BIT;
@@ -53,10 +51,8 @@ localparam RS_SIZE = 1 << RS_SIZE_BIT;
 reg valid[0 : RS_SIZE - 1];
 reg [`RS_TYPE - 1 : 0] Type[0 : RS_SIZE - 1]; // 0: NOP, 1: rs-ALU, 2: lsb-MEM, 3: rs-BRANCH
 
-reg [31 : 0] value1[0 : RS_SIZE - 1];
-reg [4 : 0] rs1[0 : RS_SIZE - 1];
-reg [31 : 0] value2[0 : RS_SIZE - 1];
-reg [4 : 0] rs2[0 : RS_SIZE - 1];
+reg [31 : 0] rs1[0 : RS_SIZE - 1];
+reg [31 : 0] rs2[0 : RS_SIZE - 1];
 reg [31 : 0] Imm[0 : RS_SIZE - 1];
 reg [4 : 0] Rd[0 : RS_SIZE - 1];
 reg [31:0] Pc[0 : RS_SIZE - 1];
@@ -88,9 +84,7 @@ always @(posedge clk_in) begin
     for (i = 0; i < RS_SIZE; i = i + 1) begin
       valid[i] <= 0;
       Type[i] <= 0;
-      value1[i] <= 0;
       rs1[i] <= 0;
-      value2[i] <= 0;
       Rd[i] <= 0;
       Pc[i] <= 0;
       rs2[i] <= 0;
@@ -103,10 +97,10 @@ always @(posedge clk_in) begin
     if (ready_add < RS_SIZE && inst_valid) begin
       valid[ready_add] <= 1;
       Type[ready_add] <= ins_Type;
-      rs1[ready_add] <= ins_rs1;
-      rs2[ready_add] <= ins_rs2;
-      _is_Qi[ready_add] <= is_Qi;
-      _is_Qj[ready_add] <= is_Qj;
+      _is_Qi[ready_add] <= (lsb_ready && lsb_rob_id == Qi) ? 0 : (rs_ready && rs_ROB_id == Qi) ? 0: is_Qi; // lsb_ready, rs_ready
+      _is_Qj[ready_add] <= (lsb_ready && lsb_rob_id == Qj) ? 0 : (rs_ready && rs_ROB_id == Qj) ? 0: is_Qj;
+      rs1[ready_add] <= (lsb_ready && lsb_rob_id == Qi) ? lsb_val : (rs_ready && rs_ROB_id == Qi) ? rs_val: ins_rs1;
+      rs2[ready_add] <= (lsb_ready && lsb_rob_id == Qj) ? lsb_val : (rs_ready && rs_ROB_id == Qj) ? rs_val: ins_rs2;
       _Qi[ready_add] <= Qi;
       _Qj[ready_add] <= Qj;
       Imm[ready_add] <= Imm_in;
@@ -115,7 +109,6 @@ always @(posedge clk_in) begin
     end
     if (rs_ready) begin // result ok
       // delete correspondant dependency
-      
       for (i = 0; i < RS_SIZE; i = i + 1) begin 
         if (_Qi[i] == rs_ROB_id) begin
           Vi[i] <= rs_val;
@@ -146,8 +139,8 @@ always @(posedge clk_in) begin
     // execute.
     if(ready_del < RS_SIZE) begin
       alu_op <= Type[ready_del];
-      Vi <= value1[ready_del];
-      Vj <= value2[ready_del];
+      Vi <= rs1[ready_del];
+      Vj <= rs2[ready_del];
       imm <= Imm[ready_del];
       pc <= Pc[ready_del];
       rd <= Rd[ready_del];
