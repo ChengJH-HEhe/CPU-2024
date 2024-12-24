@@ -15,13 +15,13 @@ module LSB #(
   input wire [31:0] rs_val,
 
   // from ROB
-  input wire ready_commit,
+  input wire rob_head_l_or_s,
   input wire [4:0] commit_id,
   
   // receive from Decoder (ins_info)
   
   input wire ins_valid,
-  input wire [LSB_TYPE_BIT : 0] ins_Type, // b,h,w / s,l 
+  input wire [LSB_TYPE_BIT - 1: 0] ins_Type, // b,h,w / s,l 
   input wire [31 : 0] ins_value1,
   input wire [4 : 0] ins_rd, // rob_id,
   input wire [31 : 0] ins_value2,
@@ -54,7 +54,8 @@ wire [4: 0] Qi_, Qj_;
 wire [31: 0] Vi_, Vj_;
 wire full;
 
-assign full = head == tail + 1;
+
+assign full = (valid[head] && head == tail) || (ins_valid && tail + 3'b1 == head);
 assign lsb_full = full;
 
 // determine input Qi 
@@ -82,7 +83,8 @@ reg _Qj[(1 << LSB_SIZE_BIT) - 1 : 0];
 reg [4 : 0] lsb_Qi[(1 << LSB_SIZE_BIT) - 1 : 0];
 reg [4 : 0] lsb_Qj[(1 << LSB_SIZE_BIT) - 1 : 0];
 reg [31 : 0] lsb_imm[(1 << LSB_SIZE_BIT) - 1 : 0];
-
+wire [4 : 0] rd_head = rd[head];
+wire not_dep = valid[head] && _Qi[head] == 0 && _Qj[head] == 0;
 integer i;
 always @(posedge clk_in) begin
   if (rst_in || clear_flag) begin
@@ -107,6 +109,7 @@ always @(posedge clk_in) begin
       lsb_Qi[i] <= 0;
       lsb_Qj[i] <= 0;
       lsb_imm[i] <= 0;
+      valid[i] <= 0;
     end
   end else if(!rdy_in) begin
   end else begin
@@ -114,15 +117,15 @@ always @(posedge clk_in) begin
     case(ticker) // 2'b00 : wait; 2'b01: store; 2'b10: load
       2'b00: begin
         lsb_ready <= 0;
-        // head is ready to execute.
-        if (valid[head] && _Qi[head] == 0 && _Qj[head] == 0 && ready_commit && commit_id == rd[head]) begin
+        // head is ready to execute & is this ins.
+        if ( not_dep && rob_head_l_or_s && commit_id == rd_head) begin
             full_mem <= 1; // to mem is full.
             head <= head + 1;
             addr <= value1[head] + lsb_imm[head];
             data <= value2[head];
             valid[head] <= 0;
-            op <= (Type[head] >= `LB && Type[head] <= `LHU)? 1 : 2;
-            ticker <= (Type[head] >= `LB && Type[head] <= `LHU)? 1 : 2;
+            op <= Type[head];
+            ticker <= (Type[head][3])? 2'b10 : 2'b01;
             lsb_ROB_id <= commit_id;
         end
       end
@@ -143,6 +146,7 @@ always @(posedge clk_in) begin
           // head op returns
           // result ready
           lsb_ready <= 1;
+          $display("Store[%d] ready", head);
           lsb_val <= 0;
           full_mem <= 0;
           ticker <= 2'b00;
@@ -156,6 +160,7 @@ always @(posedge clk_in) begin
       tail <= tail + 1;
       valid[tail] <= 1; // exist elements
       Type[tail] <= ins_Type; 
+      $display("Type = %h", ins_Type);
       // b,h,w / s,l 
       value1[tail] <= Vi_;
       rd[tail] <= ins_rd;
@@ -165,6 +170,7 @@ always @(posedge clk_in) begin
       lsb_Qi[tail] <= Qi_;
       lsb_Qj[tail] <= Qj_;
       lsb_imm[tail] <= imm;
+      $display("rs1=%d rs2=%d imm=%d", Vi_, Vj_, imm);
     end
     // delete dependency
     if (rs_ready) begin // result ok

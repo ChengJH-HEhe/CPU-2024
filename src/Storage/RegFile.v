@@ -64,23 +64,31 @@ module RegFile (
         is_Qi[i] <= 0;
       end
     end else if (!rdy_in) begin
-    end else if(clear_flag) begin
-      for(i = 0; i < 32; i = i + 1) begin
-        Qi[i] <= 0;
-        is_Qi[i] <= 0;
-      end
     end else begin
-      if(write_reg_id) begin
-        regs[write_reg_id] <= write_val;
-        if(write_reg_id != new_reg_id && Qi[write_reg_id] == write_ROB_id) begin
-          is_Qi[write_reg_id] <= 0;
-          Qi[write_reg_id] <= 0;
+      
+      if(clear_flag) begin
+        for(i = 0; i < 32; i = i + 1) begin
+          Qi[i] <= 0;
+          is_Qi[i] <= 0;
+        end
+      end else begin
+        if(write_reg_id) begin
+          regs[write_reg_id] <= write_val;
+          if(write_reg_id != new_reg_id && Qi[write_reg_id] == write_ROB_id) begin
+            is_Qi[write_reg_id] <= 0;
+            Qi[write_reg_id] <= 0;
+          end
+          // for(i = 0; i < 32; i = i + 1) begin
+          //   $write("%d\t", regs[i]);
+          // end
+          $display("");
+        end
+        if(new_reg_id) begin
+          is_Qi[new_reg_id] <= 1;
+          Qi[new_reg_id] <= new_ROB_id;
         end
       end
-      if(new_reg_id) begin
-        is_Qi[new_reg_id] <= 1;
-        Qi[new_reg_id] <= new_ROB_id;
-      end
+
     end
   end
   

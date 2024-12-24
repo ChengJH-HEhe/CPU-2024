@@ -11,9 +11,10 @@
 `define ROB_TYPE 3
 
 `define TypeJp  3'b0
-`define TypeSt  3'b1
+`define TypeLd  3'b1
 `define TypeBr  3'b10
 `define TypeRd  3'b11
+`define TypeSt 3'b100
 
 `define RS_TYPE 5
 

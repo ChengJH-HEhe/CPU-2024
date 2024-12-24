@@ -55,16 +55,17 @@ module ALU (
         res = (Vi < Vj) ? 1 : 0;
       end
       `ADDI: begin
-        res = Vi + imm;
+        res = Vi + {{20{imm[11]}}, imm};
+        $display("ADDI Vi=%d Vj=%d", Vi, {{20{imm[11]}}, imm});
       end
       `ANDI: begin
-        res = Vi & imm;
+        res = Vi & {{20{imm[11]}}, imm};
       end
       `ORI: begin
-        res = Vi | imm;
+        res = Vi | {{20{imm[11]}}, imm};
       end
       `XORI: begin
-        res = Vi ^ imm;
+        res = Vi ^ {{20{imm[11]}}, imm};
       end
       `SLLI: begin
         res = Vi << imm[4:0];

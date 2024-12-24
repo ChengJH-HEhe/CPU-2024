@@ -124,6 +124,8 @@ wire [31:0] pc_ifetcher_decoder;
 
 wire [31 : 0] pc_rs_decoder;
 wire [31 : 0] ins_pc_ifetcher_icache;
+wire rob_head_l_or_s_lsb_rob;
+wire [4 : 0] rob_head_lsb_rob;
 
 LSB lsb(
   .clk_in(clk_in),
@@ -133,8 +135,8 @@ LSB lsb(
   .rs_ready(rs_ready_public),
   .rs_ROB_id(rs_rob_id_public),
   .rs_val(rs_val_public),
-  .ready_commit(rdy_commit_public),
-  .commit_id(write_ROB_id_regf_rob),
+  .rob_head_l_or_s(rob_head_l_or_s_lsb_rob),
+  .commit_id(rob_head_lsb_rob),
   .ins_valid(valid_lsb_decoder),
   .ins_Type(ins_type_lsb_decoder),
   .ins_value1(ins_rs1_lsb_decoder),
@@ -294,6 +296,8 @@ ReorderBuffer rob(
   .lsb_set_val(lsb_val_public),
 
   .ready_commit(rdy_commit_public),
+  .rob_head(rob_head_lsb_rob),
+  .rob_head_l_or_s(rob_head_l_or_s_lsb_rob),
   .write_ROB_id(write_ROB_id_regf_rob),
 
   .write_reg_id(write_reg_id_regf_rob),

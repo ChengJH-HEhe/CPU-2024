@@ -122,13 +122,13 @@ wire _lsb = (opcode == RISC_S || opcode == RISC_L);
 wire _rs = (opcode == RISC_B || opcode == RISC_R || opcode == RISC_I);
 // ROB always needed
 
-wire [3:0] lsb_op = {~opcode[5], funct3};
+wire [3:0] lsb_op = {opcode[5], funct3};
 wire _Jalr = opcode == JALR;
 
 
 // if last addr inst = now, now need to change 
 wire _change = ins_ready && (last_addr != real_ifetcher_pc);
-wire _work = (!_lsb || !lsb_full) && (!_rs || !rs_full) && !rob_full && (!_Jalr || !_QI);
+wire _work = (!_lsb || !lsb_full) && (!_rs || !rs_full) && !rob_full && (!_Jalr || !REGF_dep_rs1);
 
 
 always @(posedge clk_in) begin
@@ -166,14 +166,15 @@ always @(posedge clk_in) begin
     if(rdy_in) begin
       // decode try to map opcode, next circle issue? no! one-circle.
       // if ins_ready, decode ins
+      IFetcher_clear <= 0;
       if(_change && _work) begin
         // ROB/LSB/RS_INS_TYPE
         case(opcode) 
-          RISC_R: ROB_ins_Type <= `TypeRd;
-          RISC_I: ROB_ins_Type <= `TypeRd;
-          RISC_L: ROB_ins_Type <= `TypeRd;
+          RISC_L: ROB_ins_Type <= `TypeLd;
           RISC_S: ROB_ins_Type <= `TypeSt;
           RISC_B: ROB_ins_Type <= `TypeBr;
+          default: 
+            ROB_ins_Type <= `TypeRd;
         endcase
 
         last_addr <= ROB_ins_Addr;
@@ -245,7 +246,7 @@ always @(posedge clk_in) begin
           JALR: begin
             ROB_ins_value <= real_ifetcher_pc + 4;
             IFetcher_clear <= 1;
-            IFetcher_new_addr <= (rs1_val + {{20{immI[10]}}, immI}) & ~32'b1;
+            IFetcher_new_addr <= (REGF_ret_val_id1 + {{20{immI[10]}}, immI}) & ~32'b1;
           end
           LUI: ROB_ins_value <= {immU, 12'b0};
           AUIPC: ROB_ins_value <= real_ifetcher_pc + {immU, 12'b0};

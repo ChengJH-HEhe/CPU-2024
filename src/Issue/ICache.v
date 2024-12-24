@@ -17,6 +17,7 @@ module ICache (
   // Ifetcher
   input wire fetch_able,
   input wire [31 : 0] input_pc, 
+
   output wire hit,
   output wire [31 : 0] hit_ins,
   output wire [31 : 0] ins_pc
@@ -59,18 +60,18 @@ always @(posedge clk_in) begin
           state <= 1;
           need_mem <= 1;
           mem_addr <= input_pc;
-          $display("addr <= %d", input_pc);
+          // $display("addr <= %d", input_pc);
         end
       end
       1: begin
-        if (mem_ins_ready && mem_addr == ins_pc) begin
+        if (mem_ins_ready) begin
           state <= 1'b0;
           need_mem <= 1'b0;
           insCache[mem_sub] <= mem_ins;
           tag[mem_sub] <= mem_tag;
           valid[mem_sub] <= 1;
           mem_addr <= 0;
-          $display("addr=%d,valid[%d]=1", ins_pc, mem_sub);
+          // $display("addr=%d,valid[%d]=1", ins_pc, mem_sub);
         end
       end
     endcase

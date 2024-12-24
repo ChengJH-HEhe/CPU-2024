@@ -53,10 +53,10 @@ module ReorderBuffer #(
         // actual jump pc ifetcher?
         output reg clear_flag,
         output reg [31:0] pc_fact,
-
         // (TODO) rs1, rs2, same as rd? 
         output wire ready_commit, // commit id
-        input wire lsb_head_complete
+        output wire rob_head_l_or_s,
+        output wire [4:0] rob_head
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
     reg [31 : 0] commit_times;
@@ -71,12 +71,17 @@ module ReorderBuffer #(
     reg [31 : 0] jpAddr[0 : ROB_SIZE - 1];
 
     reg [`ROB_WIDTH_BIT - 1 : 0] head, tail;
+
+    assign rob_head = head;
+
     integer i, file;
 
     always @(posedge clk_in) begin
         if (rst_in || (clear_flag && rdy_in)) begin
             clear_flag <= 0;
-            commit_times <= 0;
+            if(rst_in) begin
+                commit_times <= 0;
+            end
             head <= 0;
             tail <= 0;
             pc_fact <= 0;
@@ -98,6 +103,7 @@ module ReorderBuffer #(
             end 
             if(lsb_is_set) begin
                 ready[lsb_set_id] <= 1;
+                $display("lsb_[%d] is ready", lsb_set_id);
                 value[lsb_set_id] <= lsb_set_val;
             end
             // new inst , push tail
@@ -112,16 +118,15 @@ module ReorderBuffer #(
                 insType[tail] <= ins_Type;
                 rd[tail] <= ins_rd;
             end
-            if(busy[head] && ready[head]) begin
+            if(ready_commit) begin
                 head <= head + 1;
                 busy[head] <= 0;
                 ready[head] <= 0;
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
-                file = $fopen("ROB_debug.txt", "a");
-                $fdisplay(file, "commit_id = [%d]: addr = [%h] value = [%h]", commit_times, insAddr[head], value[head]);
-
-                // outut 
+                $display("commit_id = [%d]: type = [%b] addr = [%d] value = [%h]", 
+                 commit_times, insType[head], insAddr[head], value[head]);
+                // output 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
                     if (value[head][0] ^ jpAddr[head][0]) begin
@@ -135,10 +140,12 @@ module ReorderBuffer #(
     // original full or newly add full
     assign rob_full = (head == tail && busy[head]) || (tail + 5'b1 == head && inst_valid && !ready[head]);
     // 
+    assign rob_head_l_or_s = busy[head] && (insType[head] == `TypeLd || insType[head] == `TypeSt);
     // assign empty = head == tail && !busy[head];
     // to RegFile commit.
-    wire commit = busy[head] && ready[head] && rdy_in && insType[head] == `TypeRd;
-    assign ready_commit = busy[head] && ready[head] && rdy_in;
+    wire ready_head = ready[head];
+    assign ready_commit = busy[head] && ready_head && rdy_in;
+    wire commit = busy[head] && ready[head] && rdy_in && (insType[head] == `TypeRd || insType[head] == `TypeLd);
      // with lsb when commit ends, reset to zero
     assign write_reg_id = commit ? rd[head] : 0;
     assign write_val = commit ? value[head] : 0;

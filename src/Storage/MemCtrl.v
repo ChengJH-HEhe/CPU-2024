@@ -63,7 +63,7 @@ always @(posedge clk_in) begin
         if(lsb_need) begin
           // load store prior.
           // load 1, store 2
-          status <= op[3] ? 3'b001 : 3'b010;
+          status <= op[3] ? 3'b010 : 3'b001;
           ram_type <= op[3];
           case(op[1:0]) 
             2'b00 : total <= 3'b001;
@@ -151,7 +151,7 @@ always @(posedge clk_in) begin
             end
           endcase
         end else begin
-          lsb_val_ready <= 1'b0;
+          lsb_val_ready <= 1'b1;
           status <= 3'b100; // STALL!
           state <= 3'b000;
           ram_type <= 1'b0;
