@@ -127,6 +127,8 @@ wire [31 : 0] ins_pc_ifetcher_icache;
 wire rob_head_l_or_s_lsb_rob;
 wire [4 : 0] rob_head_lsb_rob;
 
+wire rob_lsb_ready;
+
 LSB lsb(
   .clk_in(clk_in),
   .rst_in(rst_in),
@@ -136,6 +138,7 @@ LSB lsb(
   .rs_ROB_id(rs_rob_id_public),
   .rs_val(rs_val_public),
   .rob_head_l_or_s(rob_head_l_or_s_lsb_rob),
+  .rob_lsb_ready(rob_lsb_ready),
   .commit_id(rob_head_lsb_rob),
   .ins_valid(valid_lsb_decoder),
   .ins_Type(ins_type_lsb_decoder),
@@ -152,7 +155,6 @@ LSB lsb(
   .full_mem(full_mem_mCtrl_lsb),
   .addr(addr_mCtrl_lsb),
   .data(data_mCtrl_lsb),
-  .load_or_store(l_or_s_mCtrl_lsb),
   .op(op_mCtrl_lsb),
   .lsb_ready(lsb_ready_public),
   .lsb_ROB_id(lsb_rob_id_public),
@@ -174,7 +176,6 @@ MemCtrl memCtrl (
   .lsb_need(full_mem_mCtrl_lsb),
   .addr(addr_mCtrl_lsb),
   .data(data_mCtrl_lsb),
-  .load_or_store(l_or_s_mCtrl_lsb),
   .op(op_mCtrl_lsb),
   .iCache_need(need_mem_memCtrl_Icache),
   .ins_addr(mem_addr_Icache_memCtrl),
@@ -292,7 +293,7 @@ ReorderBuffer rob(
   .rs_set_id(rs_rob_id_public),
   .rs_set_val(rs_val_public),
 
-  .lsb_is_set(lsb_ready_public),
+  .lsb_is_set(rob_lsb_ready),
   .lsb_set_id(lsb_rob_id_public),
   .lsb_set_val(lsb_val_public),
 

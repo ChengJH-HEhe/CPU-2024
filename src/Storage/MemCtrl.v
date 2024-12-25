@@ -20,7 +20,6 @@ module MemCtrl (
   input wire lsb_need, // store or load reg valid
   input wire [31 : 0] addr,
   input wire [31 : 0] data,
-  input wire load_or_store,
   // op[1~0] 0,1,2, byte-width;
   // op[2] = !signed
   // op[3] isStore 
@@ -50,10 +49,13 @@ always @(posedge clk_in) begin
     lsb_val_ready <= 0;
     lsb_val <= 0;
     ram_type <= 0;
-    addr_ram <= 0;
+    addr_ram <= 32'hffffffff;
     data_ram <= 0;
   end else if(~rdy_in) begin
   end else begin
+    // if(addr_ram == 29) begin
+    //   $display("is_S: %d fuck inst[28] = %d", ram_type, data_ram_in);
+    // end
     case(status)
       3'b000 :begin
         // next circle not available
@@ -82,7 +84,7 @@ always @(posedge clk_in) begin
         end else begin
           status <= 3'b0;
           total <= 3'b0;
-          addr_ram <= 32'b0;
+          addr_ram <= 32'hffffffff;
           data_ram <= 8'b0;
           ram_type <= 1'b0;
         end

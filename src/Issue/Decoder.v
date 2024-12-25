@@ -84,6 +84,7 @@ reg _QI, _QJ;
 reg [4:0] QI, QJ;
 reg [31:0] last_addr;
 reg [31 : 0] rs1_val, rs2_val, lsb_imm, rs_imm;
+reg [4:0] ins_rob_id;
 
 wire [31 : 0]real_ifetcher_pc = {pc[31 : 1], 1'b0};
 
@@ -159,6 +160,7 @@ always @(posedge clk_in) begin
     _QJ <= 0;
     QI <= 0;
     QJ <= 0;
+    ins_rob_id <= 0;
     last_addr <= 32'hffffffff;
 
   end else begin
@@ -231,6 +233,8 @@ always @(posedge clk_in) begin
         _QJ <= _rs2 && REGF_dep_rs2;
         QJ <= REGF_ret_ROB_id2;
 
+        ins_rob_id <= rob_tail;
+        
         // rob special ins
         ROB_inst_ready <= opcode == JAL || opcode == JALR || opcode == LUI || opcode == AUIPC;
         ROB_ins_rd <= rd;

@@ -38,10 +38,10 @@ module LSB #(
   output reg full_mem, // store or load reg valid
   output reg [31 : 0] addr,
   output reg [31 : 0] data,
-  output reg load_or_store,
   output reg [3 : 0] op,
 
   output reg lsb_ready, // val is valid
+  output reg rob_lsb_ready, // store is ready
   output reg [4 : 0] lsb_ROB_id,
   output reg [31 : 0] lsb_val,
   output wire lsb_full
@@ -61,8 +61,8 @@ assign lsb_full = full;
 // determine input Qi 
 assign is_Qi_ = is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id);
 assign is_Qj_ = is_Qj && (!lsb_ready || Qj != lsb_ROB_id) && (!rs_ready || Qj != rs_ROB_id); 
-assign Qi_ = is_Qi ? Qi : 0;
-assign Qj_ = is_Qj ? Qj : 0;
+assign Qi_ = is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id) ? Qi : 0;
+assign Qj_ = is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id) ? Qj : 0;
 
 // determine input Vi, Vj
 assign Vi_ = lsb_ready && Qi == lsb_ROB_id ? lsb_val : 
@@ -85,6 +85,7 @@ reg [4 : 0] lsb_Qj[(1 << LSB_SIZE_BIT) - 1 : 0];
 reg [31 : 0] lsb_imm[(1 << LSB_SIZE_BIT) - 1 : 0];
 wire [4 : 0] rd_head = rd[head];
 wire not_dep = valid[head] && _Qi[head] == 0 && _Qj[head] == 0;
+wire [31 : 0] value1_head = value1[head];
 integer i;
 always @(posedge clk_in) begin
   if (rst_in || clear_flag) begin
@@ -94,9 +95,10 @@ always @(posedge clk_in) begin
     full_mem <= 0;
     addr <= 0;
     data <= 0;
-    load_or_store <= 0;
     op <= 0;
     lsb_ready <= 0;
+    rob_lsb_ready <= 0;
+    
     lsb_ROB_id <= 0;
     lsb_val <= 0;
     for (i = 0; i < (1 << LSB_SIZE_BIT); i = i + 1) begin
@@ -114,14 +116,23 @@ always @(posedge clk_in) begin
   end else if(!rdy_in) begin
   end else begin
     // commit head
+    rob_lsb_ready <= 0;
     case(ticker) // 2'b00 : wait; 2'b01: store; 2'b10: load
       2'b00: begin
         lsb_ready <= 0;
+        // if(rd_head == 13)
+        //   $display("rob_head_ls=%d commit_id=%d rd_head=%d", rob_head_l_or_s, commit_id, rd_head);
         // head is ready to execute & is this ins.
-        if ( not_dep && rob_head_l_or_s && commit_id == rd_head) begin
+        // if(lsb_imm[head] == 28 && head == 4) begin
+        //    $display("fick!!! addr = %d + %d", value1[head] , lsb_imm[head]);
+        // end
+        if (not_dep && rob_head_l_or_s && commit_id == rd_head) begin
             full_mem <= 1; // to mem is full.
             head <= head + 1;
             addr <= value1[head] + lsb_imm[head];
+            // if(value1_head + lsb_imm[head] == 28 && Type[head][3]) begin
+            //   $display("fick addr = %d + %d", value1[head] , lsb_imm[head]);
+            // end
             data <= value2[head];
             valid[head] <= 0;
             op <= Type[head];
@@ -134,6 +145,7 @@ always @(posedge clk_in) begin
           // head op returns
           // result ready
           lsb_ready <= 1;
+          rob_lsb_ready <= 1;
           lsb_val <= mem_val;
           full_mem <= 0;
           ticker <= 2'b00;
@@ -145,7 +157,8 @@ always @(posedge clk_in) begin
         if (mem_ready) begin
           // head op returns
           // result ready
-          lsb_ready <= 1;
+          rob_lsb_ready <= 1;
+          lsb_ready <= 0;
           // $display("Store[%d] ready", head);
           lsb_val <= 0;
           full_mem <= 0;
@@ -160,28 +173,29 @@ always @(posedge clk_in) begin
       tail <= tail + 1;
       valid[tail] <= 1; // exist elements
       Type[tail] <= ins_Type; 
-      // $display("Type = %h", ins_Type);
+      // if(tail == 4)
+      //   $display("Type = %b tail=%d value1=%d,value2=%d", ins_Type,tail, Vi_, Vj_);
       // b,h,w / s,l 
       value1[tail] <= Vi_;
       rd[tail] <= ins_rd;
       value2[tail] <= Vj_;
-      _Qi[tail] <= is_Qi_;
-      _Qj[tail] <= is_Qj_;
-      lsb_Qi[tail] <= Qi_;
-      lsb_Qj[tail] <= Qj_;
+      _Qi[tail] <= is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id);
+      _Qj[tail] <= is_Qj_ && (!lsb_ready || Qj != lsb_ROB_id) && (!rs_ready || Qj != rs_ROB_id);
+      lsb_Qi[tail] <= is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id) ? Qi : 0;
+      lsb_Qj[tail] <= is_Qj && (!lsb_ready || Qj != lsb_ROB_id) && (!rs_ready || Qj != rs_ROB_id) ? Qj : 0;
       lsb_imm[tail] <= {{20{imm[11]}}, imm[11:0]};
-      // $display("rs1=%d rs2=%d imm=%d", Vi_, Vj_, imm);
+      //  $display("vi=%d vj=%d imm=%d RD=%d", Vi_, Vj_, imm, ins_rd);
     end
     // delete dependency
     if (rs_ready) begin // result ok
       // delete correspondant dependency 
       for (i = 0; i < LSB_SIZE; i = i + 1) begin 
-        if (lsb_Qi[i] == rs_ROB_id) begin
+        if (_Qi[i] && lsb_Qi[i] == rs_ROB_id) begin
           value1[i] <= rs_val;
           lsb_Qi[i] <= 0;
           _Qi[i] <= 0;
         end
-        if (lsb_Qj[i] == rs_ROB_id) begin
+        if (_Qj[i] && lsb_Qj[i] == rs_ROB_id) begin
           value2[i] <= rs_val;
           lsb_Qj[i] <= 0;
           _Qj[i] <= 0;
@@ -190,12 +204,12 @@ always @(posedge clk_in) begin
     end
     if (lsb_ready) begin
       for (i = 0; i < LSB_SIZE; i = i + 1) begin 
-        if (lsb_Qi[i] == lsb_ROB_id) begin
+        if (_Qi[i] && lsb_Qi[i] == lsb_ROB_id) begin
           value1[i] <= rs_val;
           lsb_Qi[i] <= 0;
           _Qi[i] <= 0;
         end
-        if (lsb_Qj[i] == lsb_ROB_id) begin
+        if (_Qj[i] && lsb_Qj[i] == lsb_ROB_id) begin
           value2[i] <= rs_val;
           lsb_Qj[i] <= 0;
           _Qj[i] <= 0;
