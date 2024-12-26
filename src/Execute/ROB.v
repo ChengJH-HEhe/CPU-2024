@@ -137,8 +137,8 @@ module ReorderBuffer #(
                 ready[head] <= 0;
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
-                if(commit_times % 2000 == 0)
-                    $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
+                // if(commit_times % 2000 == 0)
+                //     $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
                 // output 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
