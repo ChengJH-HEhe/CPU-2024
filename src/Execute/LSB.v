@@ -44,7 +44,8 @@ module LSB #(
   output reg rob_lsb_ready, // store is ready
   output reg [4 : 0] lsb_ROB_id,
   output reg [31 : 0] lsb_val,
-  output wire lsb_full
+  output wire lsb_full,
+  input wire [31 : 0] lsb_commit_times
 );
 localparam LSB_SIZE = 1 << LSB_SIZE_BIT;
 reg [LSB_SIZE_BIT - 1 : 0] head, tail;
@@ -84,9 +85,9 @@ reg [4 : 0] lsb_Qi[(1 << LSB_SIZE_BIT) - 1 : 0];
 reg [4 : 0] lsb_Qj[(1 << LSB_SIZE_BIT) - 1 : 0];
 reg [31 : 0] lsb_imm[(1 << LSB_SIZE_BIT) - 1 : 0];
 wire [4 : 0] rd_head = rd[head];
-wire not_dep = valid[head] && _Qi[head] == 0 && _Qj[head] == 0;
+wire not_dep = valid[head] && (!_Qi[head]) && (!_Qj[head]);
 wire [31 : 0] addr_head = value1[head] + lsb_imm[head];
-integer i;
+integer i,file;
 always @(posedge clk_in) begin
   if (rst_in || clear_flag) begin
     head <= 0;
@@ -117,6 +118,13 @@ always @(posedge clk_in) begin
   end else begin
     // commit head
     rob_lsb_ready <= 0;
+    // if(lsb_commit_times >= 520) 
+    //     begin
+    //         $display("commit %d head: %d tail: %d", lsb_commit_times, head, tail);
+    //         for(i = head; i < tail; i = i + 1) begin
+    //             $display("[%d]: rd=[%d], imm=[%d], valid=%b, _Qi=%d:%d, _Qj=%d:%d", i, rd[i],imm[i], valid[i], _Qi[i],lsb_Qi[i], _Qj[i],lsb_Qj[i]);
+    //         end
+    //     end
     case(ticker) // 2'b00 : wait; 2'b01: store; 2'b10: load
       2'b00: begin
         lsb_ready <= 0;
@@ -127,20 +135,22 @@ always @(posedge clk_in) begin
         //    $display("fick!!! addr = %d + %d", value1[head] , lsb_imm[head]);
 
         // || (~Type[head][3] && addr_head != 196608 && addr_head != 196612) load o-o-o?
-        
+        if(lsb_commit_times >= 500 && valid[head]) begin
+          file = $fopen("lsb_debug.txt","a");
+          $fwrite(file,"%d lsb[%d:%d): Tp=%d, rd=[rob:%d][%d], imm=[%d], valid=%b, _Qi=%d:%d, _Qj=%d:%d\n",
+          lsb_commit_times, head, tail, Type[head], commit_id,rd[head], lsb_imm[head], valid[head], _Qi[head],lsb_Qi[head], _Qj[head],lsb_Qj[head]);
+          $fclose(file);
+        end
         if (not_dep && ((rob_head_l_or_s && commit_id == rd_head) 
-        )) begin
+        || (~Type[head][3] && addr_head != 196608 && addr_head != 196612) )) begin
             full_mem <= 1; // to mem is full.
             head <= head + 1;
             addr <= addr_head;
-            // if(value1_head + lsb_imm[head] == 28 && Type[head][3]) begin
-            //   $display("fick addr = %d + %d", value1[head] , lsb_imm[head]);
-            // end
             data <= value2[head];
             valid[head] <= 0;
             op <= Type[head];
             ticker <= (Type[head][3])? 2'b10 : 2'b01;
-            lsb_ROB_id <= commit_id;
+            lsb_ROB_id <= rd_head;
         end
       end
       2'b01: begin // LOAD
@@ -179,13 +189,13 @@ always @(posedge clk_in) begin
       // if(tail == 4)
       //   $display("Type = %b tail=%d value1=%d,value2=%d", ins_Type,tail, Vi_, Vj_);
       // b,h,w / s,l 
-      value1[tail] <= Vi_;
       rd[tail] <= ins_rd;
+      value1[tail] <= Vi_;
       value2[tail] <= Vj_;
       _Qi[tail] <= is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id);
       _Qj[tail] <= is_Qj_ && (!lsb_ready || Qj != lsb_ROB_id) && (!rs_ready || Qj != rs_ROB_id);
-      lsb_Qi[tail] <= is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id) ? Qi : 0;
-      lsb_Qj[tail] <= is_Qj && (!lsb_ready || Qj != lsb_ROB_id) && (!rs_ready || Qj != rs_ROB_id) ? Qj : 0;
+      lsb_Qi[tail] <= Qi;
+      lsb_Qj[tail] <= Qj;
       lsb_imm[tail] <= {{20{imm[11]}}, imm[11:0]};
       //  $display("vi=%d vj=%d imm=%d RD=%d", Vi_, Vj_, imm, ins_rd);
     end
@@ -208,12 +218,12 @@ always @(posedge clk_in) begin
     if (lsb_ready) begin
       for (i = 0; i < LSB_SIZE; i = i + 1) begin 
         if (_Qi[i] && lsb_Qi[i] == lsb_ROB_id) begin
-          value1[i] <= rs_val;
+          value1[i] <= lsb_val;
           lsb_Qi[i] <= 0;
           _Qi[i] <= 0;
         end
         if (_Qj[i] && lsb_Qj[i] == lsb_ROB_id) begin
-          value2[i] <= rs_val;
+          value2[i] <= lsb_val;
           lsb_Qj[i] <= 0;
           _Qj[i] <= 0;
         end

@@ -128,12 +128,14 @@ wire rob_head_l_or_s_lsb_rob;
 wire [4 : 0] rob_head_lsb_rob;
 
 wire rob_lsb_ready;
+wire [31:0] regF_print;
 
 LSB lsb(
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
   .clear_flag(clear_flag_rob_public),
+  .lsb_commit_times(regF_print),
   .rs_ready(rs_ready_public),
   .rs_ROB_id(rs_rob_id_public),
   .rs_val(rs_val_public),
@@ -273,12 +275,12 @@ ALU alu(
   .rd_out(rs_rob_id_public),
   .res(rs_val_public)
 );
-wire regF_print;
+
 ReorderBuffer rob(
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
-  .regF_print(regF_print),
+  .commit_tim(regF_print),
   .inst_valid(valid_rob_decoder),
   .inst_ready(rdy_rob_decoder),
   .ins_value(ins_value_rob_decoder),
@@ -294,6 +296,7 @@ ReorderBuffer rob(
   .rs_set_val(rs_val_public),
 
   .lsb_is_set(rob_lsb_ready),
+  .lsb_is_set_val(lsb_ready_public),
   .lsb_set_id(lsb_rob_id_public),
   .lsb_set_val(lsb_val_public),
 
@@ -323,7 +326,6 @@ RegFile u_RegFile(
   .clk_in       	( clk_in        ),
   .rst_in       	( rst_in        ),
   .rdy_in       	( rdy_in        ),
-  .regF_print(regF_print),
   .clear_flag   	( clear_flag_rob_public    ),
   .ask_reg_id1  	( ask_id1_regf_decoder   ),
   .ask_reg_id2  	( ask_id2_regf_decoder   ),

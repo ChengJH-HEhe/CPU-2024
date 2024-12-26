@@ -29,6 +29,7 @@ module ReorderBuffer #(
         input wire [31 : 0] rs_set_val,
         // from LSB execute end
         input wire lsb_is_set,
+        input wire lsb_is_set_val,
         input wire [ROB_SIZE_BIT - 1 : 0] lsb_set_id,
         input wire [31 : 0] lsb_set_val,
 
@@ -57,11 +58,12 @@ module ReorderBuffer #(
         output wire ready_commit, // commit id
         output wire rob_head_l_or_s,
         output wire [4:0] rob_head,
-
-        output reg regF_print
+        output wire [31:0] commit_tim
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
     reg [31 : 0] commit_times;
+
+    assign commit_tim = commit_times;
 
     reg ready[0 : ROB_SIZE - 1];
     reg busy[0 : ROB_SIZE - 1];
@@ -81,7 +83,6 @@ module ReorderBuffer #(
     integer i, file;
 
     always @(posedge clk_in) begin
-        regF_print <= 0;
 
         if (rst_in || (clear_flag && rdy_in)) begin
             clear_flag <= 0;
@@ -136,20 +137,8 @@ module ReorderBuffer #(
                 ready[head] <= 0;
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
-                regF_print <= 1;
-                if(commit_times % 1 == 0)
+                if(commit_times % 2000 == 0)
                     $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
-                // if(commit_times >= 6000 && commit_times <= 6100) 
-                begin
-                    file = $fopen("debug.txt","a");
-                    $fwrite(file, "commit_id = [%d]: type = [%b] addr = [%d] value = [%h]\n", 
-                    commit_times, insType[head], insAddr[head], value[head]);
-                    $fclose(file);
-                    //  $display("commit %d head: %d tail: %d", commit_times, head, tail);
-                    // for(i = head; i < tail; i = i + 1) begin
-                    //     $display("[%d]: pc=%d", i, insAddr[i]);
-                    // end
-                end
                 // output 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
@@ -160,6 +149,15 @@ module ReorderBuffer #(
                     end
                 end     
             end
+            // if(commit_times >= 521) 
+            //     begin
+            //         file = $fopen("debug.txt","a");
+            //         $fwrite(file, "commit_%d id = [%d]: type = [%b] addr = [%d] value = [%h]\n", 
+            //         commit_times, head, insType[head], insAddr[head], value[head]);
+            //         $fclose(file);
+            //         $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
+            //         $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
+            //     end
         end
     end
     // original full or newly add full
@@ -185,12 +183,12 @@ module ReorderBuffer #(
 
     // answer RegFile dependency? send back correct value
     // TODO: new collected result.
-    assign rs1_ready = ready[rs1_id] || (rs_is_set && rs1_id == rs_set_id) || (lsb_is_set && rs1_id == lsb_set_id) || (inst_valid && inst_ready && rs1_id == tail);
+    assign rs1_ready = ready[rs1_id] || (rs_is_set && rs1_id == rs_set_id) || (lsb_is_set_val && rs1_id == lsb_set_id) || (inst_valid && inst_ready && rs1_id == tail);
     assign rs1_val = ready[rs1_id]? value[rs1_id] : 
                     rs_is_set && rs1_id == rs_set_id ? rs_set_val : 
-                    lsb_is_set && rs1_id == lsb_set_id ? lsb_set_val : ins_value;
+                    lsb_is_set_val && rs1_id == lsb_set_id ? lsb_set_val : ins_value;
 
-    assign rs2_ready = ready[rs2_id] || (rs_is_set && rs2_id == rs_set_id) || (lsb_is_set && rs2_id == lsb_set_id) || (inst_valid && inst_ready && rs2_id == tail);
+    assign rs2_ready = ready[rs2_id] || (rs_is_set && rs2_id == rs_set_id) || (lsb_is_set_val && rs2_id == lsb_set_id) || (inst_valid && inst_ready && rs2_id == tail);
     assign rs2_val = ready[rs2_id]? value[rs2_id] : 
                     rs_is_set && rs2_id == rs_set_id ? rs_set_val : 
                     lsb_is_set && rs2_id == lsb_set_id ? lsb_set_val : ins_value;

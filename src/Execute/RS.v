@@ -77,6 +77,12 @@ assign ready_del = exec[0] == 1 ? 0 : exec[1] == 1 ? 1 : exec[2] == 1 ? 2 : exec
 assign ready_add = valid[0] == 0 ? 0 : valid[1] == 0 ? 1 : valid[2] == 0 ? 2 : valid[3] == 0 ? 3 : valid[4] == 0 ? 4 : valid[5] == 0 ? 5 : valid[6] == 0 ? 6 : valid[7] == 0 ? 7 : 8;
 assign full = ready_add == RS_SIZE;
 
+wire _is_Qi_ = (lsb_ready && lsb_rob_id == Qi) ? 0 : (rs_ready && rs_ROB_id == Qi) ? 0: is_Qi;
+wire _is_Qj_ = (lsb_ready && lsb_rob_id == Qj) ? 0 : (rs_ready && rs_ROB_id == Qj) ? 0: is_Qj;
+
+wire [31:0] Q_i = (lsb_ready && lsb_rob_id == Qi) ? lsb_val : (rs_ready && rs_ROB_id == Qi) ? rs_val: ins_rs1;
+wire [31:0] Q_j = (lsb_ready && lsb_rob_id == Qj) ? lsb_val : (rs_ready && rs_ROB_id == Qj) ? rs_val: ins_rs2;
+
 integer i;
 
 always @(posedge clk_in) begin
@@ -97,26 +103,31 @@ always @(posedge clk_in) begin
     if (ready_add < RS_SIZE && inst_valid) begin
       valid[ready_add] <= 1;
       Type[ready_add] <= ins_Type;
-      _is_Qi[ready_add] <= (lsb_ready && lsb_rob_id == Qi) ? 0 : (rs_ready && rs_ROB_id == Qi) ? 0: is_Qi; // lsb_ready, rs_ready
-      _is_Qj[ready_add] <= (lsb_ready && lsb_rob_id == Qj) ? 0 : (rs_ready && rs_ROB_id == Qj) ? 0: is_Qj;
-      rs1[ready_add] <= (lsb_ready && lsb_rob_id == Qi) ? lsb_val : (rs_ready && rs_ROB_id == Qi) ? rs_val: ins_rs1;
-      rs2[ready_add] <= (lsb_ready && lsb_rob_id == Qj) ? lsb_val : (rs_ready && rs_ROB_id == Qj) ? rs_val: ins_rs2;
+      _is_Qi[ready_add] <= _is_Qi_; // lsb_ready, rs_ready
+      _is_Qj[ready_add] <= _is_Qj_;
+      rs1[ready_add] <= Q_i;
+      rs2[ready_add] <= Q_j;
       _Qi[ready_add] <= Qi;
       _Qj[ready_add] <= Qj;
       Imm[ready_add] <= Imm_in;
       Rd[ready_add] <= ROB_id;
       Pc[ready_add] <= Pc_in;
+      // check 328
+      if(Pc_in == 328) begin
+        
+      end
+
     end
     if (rs_ready) begin // result ok
       // delete correspondant dependency
       for (i = 0; i < RS_SIZE; i = i + 1) begin 
         if (_is_Qi[i] && _Qi[i] == rs_ROB_id) begin
-          Vi[i] <= rs_val;
+          rs1[i] <= rs_val;
           _Qi[i] <= 0;
           _is_Qi[i] <= 0;
         end
         if (_is_Qj[i] &&_Qj[i] == rs_ROB_id) begin
-          Vj[i] <= rs_val;
+          rs2[i] <= rs_val;
           _Qj[i] <= 0;
           _is_Qj[i] <= 0;
         end
@@ -125,12 +136,12 @@ always @(posedge clk_in) begin
     if (lsb_ready) begin
       for (i = 0; i < RS_SIZE; i = i + 1) begin 
         if (_is_Qi[i] && _Qi[i] == lsb_rob_id) begin
-          Vi[i] <= lsb_val;
+          rs1[i] <= lsb_val;
           _Qi[i] <= 0;
           _is_Qi[i] <= 0;
         end
         if (_is_Qj[i] && _Qj[i] == lsb_rob_id) begin
-          Vj[i] <= lsb_val;
+          rs2[i] <= lsb_val;
           _Qj[i] <= 0;
           _is_Qj[i] <= 0;
         end

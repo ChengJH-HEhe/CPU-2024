@@ -35,7 +35,7 @@ module RegFile (
   input wire rs2_ready,
   input wire [31 : 0] rs2_val,
   // RS op1, op2, free dependency? 
-  input wire regF_print
+  input wire [31:0] regF_print
 );
   reg [31:0] regs[0:31];
   reg [`ROB_WIDTH_BIT-1:0] Qi[0:31];
@@ -74,14 +74,14 @@ module RegFile (
       end
     end else if (!rdy_in) begin
     end else begin
-      if(regF_print) begin
-        file = $fopen("debug.txt","a");
-        for(i = 0; i < 32; i = i + 1) begin
-          $fwrite(file, "%d", regs[i]);
-        end
-        $fwrite(file, "\n");
-        $fclose(file);
-      end
+      // if(regF_print >= 522) begin
+      //   file = $fopen("debug.txt","a");
+      //   for(i = 0; i < 32; i = i + 1) begin
+      //     $fwrite(file, "%d", regs[i]);
+      //   end
+      //   $fwrite(file, "\n");
+      //   $fclose(file);
+      // end
       if(clear_flag) begin
         for(i = 0; i < 32; i = i + 1) begin
           Qi[i] <= 0;
@@ -98,14 +98,10 @@ module RegFile (
         end
         if(new_reg_id) begin
           is_Qi[new_reg_id] <= 1;
-          Qi[new_reg_id] <= new_ROB_id;
-          
+          Qi[new_reg_id] <= new_ROB_id;    
         end
       end
 
     end
-  end
-  
-
-  
+  end  
 endmodule
