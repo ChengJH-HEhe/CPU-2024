@@ -108,7 +108,7 @@ wire [31:0] imm_rd = {{20{imm[11]}}, imm[11:0]};
         res = 0;
       end
     endcase
-    // if(pc != 0)
-    //   $display("pc=%d op=%d imm=%d, res=%h", pc, alu_op, imm_rd, res);
+    // if(alu_op == `BEQ && pc == 320)
+    //   $display("pc=%d op=%d rs1=%d rs2=%d", pc, alu_op, Vi, Vj);
   end
 endmodule

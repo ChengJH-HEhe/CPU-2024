@@ -41,6 +41,8 @@ module RegFile (
   reg [`ROB_WIDTH_BIT-1:0] Qi[0:31];
   reg is_Qi[0:31];
 
+  wire [31:0] regs_id1 = regs[ask_reg_id1];
+  wire [31:0] regs_id2 = regs[ask_reg_id2];
   // ROB ask for dependency.
   // case 1: Qi in reg
   // case 2: Qi in new_reg_id
@@ -51,8 +53,8 @@ module RegFile (
 
   assign ret_ROB_id1 = ask_reg_id1 == new_reg_id ? new_ROB_id : Qi[ask_reg_id1];
   assign ret_ROB_id2 = ask_reg_id2 == new_reg_id ? new_ROB_id : Qi[ask_reg_id2];
-  assign ret_val_id1 = has_dep_id1 ? rs1_val : regs[ask_reg_id1];
-  assign ret_val_id2 = has_dep_id2 ? rs2_val : regs[ask_reg_id2];
+  assign ret_val_id1 = has_dep_id1 ? rs1_val : regs_id1;
+  assign ret_val_id2 = has_dep_id2 ? rs2_val : regs_id2;
   assign dep_rs1 = has_dep_id1 && !rs1_ready;
   assign dep_rs2 = has_dep_id2 && !rs2_ready;  
 

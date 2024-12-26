@@ -110,12 +110,12 @@ always @(posedge clk_in) begin
     if (rs_ready) begin // result ok
       // delete correspondant dependency
       for (i = 0; i < RS_SIZE; i = i + 1) begin 
-        if (_Qi[i] == rs_ROB_id) begin
+        if (_is_Qi[i] && _Qi[i] == rs_ROB_id) begin
           Vi[i] <= rs_val;
           _Qi[i] <= 0;
           _is_Qi[i] <= 0;
         end
-        if (_Qj[i] == rs_ROB_id) begin
+        if (_is_Qj[i] &&_Qj[i] == rs_ROB_id) begin
           Vj[i] <= rs_val;
           _Qj[i] <= 0;
           _is_Qj[i] <= 0;
@@ -124,12 +124,12 @@ always @(posedge clk_in) begin
     end
     if (lsb_ready) begin
       for (i = 0; i < RS_SIZE; i = i + 1) begin 
-        if (_Qi[i] == lsb_rob_id) begin
+        if (_is_Qi[i] && _Qi[i] == lsb_rob_id) begin
           Vi[i] <= lsb_val;
           _Qi[i] <= 0;
           _is_Qi[i] <= 0;
         end
-        if (_Qj[i] == lsb_rob_id) begin
+        if (_is_Qj[i] && _Qj[i] == lsb_rob_id) begin
           Vj[i] <= lsb_val;
           _Qj[i] <= 0;
           _is_Qj[i] <= 0;

@@ -85,7 +85,7 @@ reg [4 : 0] lsb_Qj[(1 << LSB_SIZE_BIT) - 1 : 0];
 reg [31 : 0] lsb_imm[(1 << LSB_SIZE_BIT) - 1 : 0];
 wire [4 : 0] rd_head = rd[head];
 wire not_dep = valid[head] && _Qi[head] == 0 && _Qj[head] == 0;
-wire [31 : 0] value1_head = value1[head];
+wire [31 : 0] addr_head = value1[head] + lsb_imm[head];
 integer i;
 always @(posedge clk_in) begin
   if (rst_in || clear_flag) begin
@@ -125,11 +125,14 @@ always @(posedge clk_in) begin
         // head is ready to execute & is this ins.
         // if(lsb_imm[head] == 28 && head == 4) begin
         //    $display("fick!!! addr = %d + %d", value1[head] , lsb_imm[head]);
-        // end
-        if (not_dep && rob_head_l_or_s && commit_id == rd_head) begin
+
+        // || (~Type[head][3] && addr_head != 196608 && addr_head != 196612) load o-o-o?
+        
+        if (not_dep && ((rob_head_l_or_s && commit_id == rd_head) 
+        )) begin
             full_mem <= 1; // to mem is full.
             head <= head + 1;
-            addr <= value1[head] + lsb_imm[head];
+            addr <= addr_head;
             // if(value1_head + lsb_imm[head] == 28 && Type[head][3]) begin
             //   $display("fick addr = %d + %d", value1[head] , lsb_imm[head]);
             // end

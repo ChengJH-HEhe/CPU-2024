@@ -137,9 +137,10 @@ module ReorderBuffer #(
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
                 regF_print <= 1;
-                if(commit_times % 1000 == 0)
-                    $display("commit %d head: %d tail: %d", commit_times, head, tail);
-                if(commit_times >= 6000 && commit_times <= 6100) begin
+                if(commit_times % 1 == 0)
+                    $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
+                // if(commit_times >= 6000 && commit_times <= 6100) 
+                begin
                     file = $fopen("debug.txt","a");
                     $fwrite(file, "commit_id = [%d]: type = [%b] addr = [%d] value = [%h]\n", 
                     commit_times, insType[head], insAddr[head], value[head]);
@@ -178,7 +179,7 @@ module ReorderBuffer #(
     assign rob_tail = tail;
     
     // to RegFile new tail.
-    wire new_element = rdy_in && inst_valid && ins_Type == `TypeRd;
+    wire new_element = rdy_in && inst_valid && (ins_Type == `TypeRd || ins_Type == `TypeLd);
     assign new_reg_id = new_element ? ins_rd : 0;
     assign new_ROB_id = new_element ? tail : 0;
 
