@@ -135,12 +135,12 @@ always @(posedge clk_in) begin
         //    $display("fick!!! addr = %d + %d", value1[head] , lsb_imm[head]);
 
         // || (~Type[head][3] && addr_head != 196608 && addr_head != 196612) load o-o-o?
-        if(lsb_commit_times >= 500 && valid[head]) begin
-          file = $fopen("lsb_debug.txt","a");
-          $fwrite(file,"%d lsb[%d:%d): Tp=%d, rd=[rob:%d][%d], imm=[%d], valid=%b, _Qi=%d:%d, _Qj=%d:%d\n",
-          lsb_commit_times, head, tail, Type[head], commit_id,rd[head], lsb_imm[head], valid[head], _Qi[head],lsb_Qi[head], _Qj[head],lsb_Qj[head]);
-          $fclose(file);
-        end
+        // if(lsb_commit_times >= 500 && valid[head]) begin
+        //   file = $fopen("lsb_debug.txt","a");
+        //   $fwrite(file,"%d lsb[%d:%d): Tp=%d, rd=[rob:%d][%d], imm=[%d], valid=%b, _Qi=%d:%d, _Qj=%d:%d\n",
+        //   lsb_commit_times, head, tail, Type[head], commit_id,rd[head], lsb_imm[head], valid[head], _Qi[head],lsb_Qi[head], _Qj[head],lsb_Qj[head]);
+        //   $fclose(file);
+        // end
         if (not_dep && ((rob_head_l_or_s && commit_id == rd_head) 
         || (~Type[head][3] && addr_head != 196608 && addr_head != 196612) )) begin
             full_mem <= 1; // to mem is full.
