@@ -33,9 +33,9 @@ module RegFile (
 
   output wire [`ROB_WIDTH_BIT - 1 : 0] rs2_id,
   input wire rs2_ready,
-  input wire [31 : 0] rs2_val,
+  input wire [31 : 0] rs2_val
   // RS op1, op2, free dependency? 
-  input wire [31:0] regF_print
+  // input wire [31:0] regF_print
 );
   reg [31:0] regs[0:31];
   reg [`ROB_WIDTH_BIT-1:0] Qi[0:31];
