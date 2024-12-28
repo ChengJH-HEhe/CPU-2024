@@ -118,7 +118,7 @@ wire [6:0] opcode = is_Itype ? ins[6:0]: //C-type
   (ins[1:0] == 2'b10) ?
     ((funct3 == 3'b000) ? RISC_I :  // SLLI
     (funct3 == 3'b010) ? RISC_L :  // LWSP
-    (funct4 == 4'b1000) ? (ins_6_2 == 5'b0 ? JAL : RISC_I) : // JR, MV
+    (funct4 == 4'b1000) ? (ins_6_2 == 5'b0 ? JAL : RISC_R) : // JR, MV
     (funct4 == 4'b1001) ? (ins_6_2 == 5'b0 ? JALR : RISC_R) : // JALR, ADD
     (funct3 == 3'b110) ? RISC_S : 7'b0) // SWSP 7
  : (ins[1:0] == 2'b01)?
@@ -138,17 +138,23 @@ wire [4:0] rd = (is_Itype || (ins[1:0] == 2'b10)) ? ins[11:7]
   : (ins[1:0] == 2'b01) ? (ins[15] ? {1'b0,1'b1,ins[9:7]} : ins[11:7]) 
   : (ins[1:0] == 2'b00) ? {1'b0,1'b1,ins[4:2]} : 5'b0;  
 wire [4:0] rs1 = is_Itype ? ins[19:15]
-    : (ins[1:0] == 2'b10) ? ins[11:7]
+    : (ins[1:0] == 2'b10) ? ( (ins[14:13] == 2'b10) ? 5'd2 :
+       (ins[15:12] == 4'b1000 && ins_6_2 != 5'b0)? 5'd0 : ins[11:7])
     : (ins[1:0] == 2'b01) ? (ins[15] ? {1'b0,1'b1,ins[9:7]} : ins[11:7])
     : (ins[1:0] == 2'b00) ? {1'b0,1'b1,ins[9:7]} : 5'b0;
 wire [4:0] rs2 = is_Itype ? ins[24:20]
     : (ins[1:0] == 2'b10) ? ins[6:2]
-    : {1'b0,1'b1,ins[4:2]};
-    
-wire [11:0] immI = ins[31:20]; // I_STAR merged into I
-wire [4:0] immI_star = ins[24:20];
-wire [11:0] immS = {ins[31:25], ins[11:7]};
-wire [11:0] immB = {ins[31], ins[7], ins[30:25], ins[11:8], 1'b0};
+    : (ins[1:0] == 2'b01 && ins[15:14] == 2'b11) ? 5'b0 : {1'b0,1'b1,ins[4:2]};
+
+wire [11:0] immI = is_Itype ? ins[31:20] : 
+  (ins[1:0] == 2'b01) ? 
+; // I_STAR merged into I
+
+wire [4:0] immI_star = is_Itype ? ins[24:20] : {ins[12], ins[6:2]};
+
+wire [11:0] immS = is_Itype ? {ins[31:25], ins[11:7]} : (ins[1:0] == 2'b00) ? {5'b0, ins[5], ins[12:10], ins[6], 2'b0} : {4'b0, ins[8:7], ins[12:9], 2'b0};
+wire [11:0] immB = is_Itype ? {ins[31], ins[7], ins[30:25], ins[11:8], 1'b0} : 
+  {{5{ins[12]}}, ins[6:5],ins[2],ins[11:10],ins[4:3],1'b0};
 wire [31:12] immU = ins[31:12];
 // _ represent boolean
 
@@ -159,7 +165,7 @@ wire _lsb = (opcode == RISC_S || opcode == RISC_L);
 wire _rs = (opcode == RISC_B || opcode == RISC_R || opcode == RISC_I);
 // ROB always needed
 
-wire [3:0] lsb_op = {opcode[5], funct3};
+wire [3:0] lsb_op = is_Itype ? {opcode[5], funct3} : {funct3[2], 1'b0, funct3[1:0]};
 wire _Jalr = opcode == JALR;
 
 
@@ -258,7 +264,11 @@ always @(posedge clk_in) begin
           endcase
         end 
 
-        rs_imm <= opcode == RISC_I ?((funct3 == 3'b001 || funct3 == 3'b101)? immI_star : immI) : opcode == RISC_B? immB :  32'b0;
+        rs_imm <= 
+        opcode == RISC_I ? 
+          (is_Itype ? ((funct3 == 3'b001 || funct3 == 3'b101)? immI_star : immI) 
+            : ((ins[1:0] == 2'b01 && ins[15:13] == 3'b100 || (ins[1:0] == 2'b10 && ins[15:13] == 3'b010)) ? immI_star : immI))
+         : opcode == RISC_B? immB :  32'b0;
         lsb_imm <= opcode == RISC_L ? immI : immS;
 
         rs1_val <= REGF_ret_val_id1;
