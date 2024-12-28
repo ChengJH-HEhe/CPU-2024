@@ -113,9 +113,9 @@ always @(posedge clk_in) begin
       Rd[ready_add] <= ROB_id;
       Pc[ready_add] <= Pc_in;
       // check 328
-      if(Pc_in == 328) begin
-        
-      end
+      // begin
+      //   $display("pc=%h type=%h imm=%d", Pc_in, ins_Type, Imm_in); 
+      // end
 
     end
     if (rs_ready) begin // result ok

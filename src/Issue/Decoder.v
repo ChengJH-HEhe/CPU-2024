@@ -136,14 +136,20 @@ wire [6:0] opcode = is_Itype ? ins[6:0]: //C-type
 ;
 wire [11:0] imm_andI = {{3{ins[12]}}, ins[4:3], ins[5], ins[2], ins[6], 4'b0};
 wire [4:0] rd = (is_Itype || (ins[1:0] == 2'b10)) ? ins[11:7]
-  : (ins[1:0] == 2'b01) ? (ins[15] ? {1'b0,1'b1,ins[9:7]} : ins[11:7]) 
+  : (ins[1:0] == 2'b01) ? (funct3 == 3'b101) ? 5'b0 : // j
+  (ins[15] ? {1'b0,1'b1,ins[9:7]} : // 1 
+  (funct3 == 3'b001) ? 5'b1 : // jal
+  ins[11:7]) 
   : (ins[1:0] == 2'b00) ? {1'b0,1'b1,ins[4:2]} : 5'b0;  
   // JALR rs1 : 
 wire [4:0] rs1 = is_Itype ? ins[19:15]
-    : (ins[1:0] == 2'b10) ? ( (ins[14:13] == 2'b10) ? 5'd2 :
-       (ins[15:12] == 4'b1000 && ins_6_2 != 5'b0)? 5'd0 : ins[11:7])
-    : (ins[1:0] == 2'b01) ? (ins[15] ? {1'b0,1'b1,ins[9:7]} : ins[11:7])
+    : (ins[1:0] == 2'b10) ? ( (ins[14:13] == 2'b10) ? 5'd2 : // lwsp ,swsp
+       (ins[15:12] == 4'b1000 && ins_6_2 != 5'b0)? 5'd0 : ins[11:7]) // mv; jr
+    : (ins[1:0] == 2'b01) ? 
+      (ins[15] ? {1'b0,1'b1,ins[9:7]} : // other R
+        ins[11:7]) 
     : (ins[1:0] == 2'b00) ? {1'b0,1'b1,ins[9:7]} : 5'b0;
+    // MV 0
 wire [4:0] rs2 = is_Itype ? ins[24:20]
     : (ins[1:0] == 2'b10) ? ins[6:2]
     : (ins[1:0] == 2'b01 && ins[15:14] == 2'b11) ? 5'b0 : {1'b0,1'b1,ins[4:2]};

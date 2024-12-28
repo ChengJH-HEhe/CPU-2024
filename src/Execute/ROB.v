@@ -139,6 +139,14 @@ module ReorderBuffer #(
                 commit_times <= commit_times + 1;
                 // if(commit_times % 2000 == 0)
                     $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
+                begin
+                    file = $fopen("debug.txt","a");
+                    $fwrite(file, "commit_%d id = [%d]: addr = [%h]\n", 
+                    commit_times, head, insAddr[head]);
+                    $fclose(file);
+                    $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
+                    // $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
+                end
                 // output 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
@@ -150,14 +158,6 @@ module ReorderBuffer #(
                 end     
             end
             // if(commit_times >= 521) 
-            //     begin
-            //         file = $fopen("debug.txt","a");
-            //         $fwrite(file, "commit_%d id = [%d]: type = [%b] addr = [%d] value = [%h]\n", 
-            //         commit_times, head, insType[head], insAddr[head], value[head]);
-            //         $fclose(file);
-            //         $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
-            //         $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
-            //     end
         end
     end
     // original full or newly add full
