@@ -118,25 +118,27 @@ wire [6:0] opcode = is_Itype ? ins[6:0]: //C-type
   (ins[1:0] == 2'b10) ?
     ((funct3 == 3'b000) ? RISC_I :  // SLLI
     (funct3 == 3'b010) ? RISC_L :  // LWSP
-    (funct4 == 4'b1000) ? (ins_6_2 == 5'b0 ? JAL : RISC_R) : // JR, MV
-    (funct4 == 4'b1001) ? (ins_6_2 == 5'b0 ? JALR : RISC_R) : // JALR, ADD
+    (funct3 == 3'b100) ? (ins_6_2 == 5'b0 ? JALR : RISC_R) : // JR, MV
+     // JALR, ADD
     (funct3 == 3'b110) ? RISC_S : 7'b0) // SWSP 7
  : (ins[1:0] == 2'b01)?
     ((funct3 == 3'b000) ? RISC_I :  // ADDI
     (funct3 == 3'b001) ? JAL :  // JAL
     (funct3 == 3'b010) ? LUI :  // LI in c-type immli_u be calced
-    (funct3 == 3'b011) ? (ins_11_7 == 2 ? RISC_I : LUI) :  // ADDI16SP : LUI
-    (funct4 == 3'b100) ? (ins_11_10 == 2'b11 ? RISC_R : RISC_I) : // SRLI, SRAI, ANDI/ SUB,XOR,OR,AND 
-    (funct4 == 3'b101) ? JAL : // J
+    (funct3 == 3'b011) ? (ins_11_7 == 2 ? RISC_I : LUI) :  // ADDI16SP , LUI
+    (funct3 == 3'b100) ? (ins_11_10 == 2'b11 ? RISC_R : RISC_I) : // SRLI, SRAI, ANDI/ SUB,XOR,OR,AND 
+    (funct3 == 3'b101) ? JAL : // J 
                         RISC_B) // 110: BEQZ 111:BNEZ 15
   // ins[1:0] == 2'b00
  : (funct3 == 3'b000) ? RISC_I : // ADDI4SPN
  (funct3 == 3'b010) ? RISC_L : // LW
  (funct3 == 3'b110) ? RISC_S : 7'b0 // SW 3
 ;
+wire [11:0] imm_andI = {{3{ins[12]}}, ins[4:3], ins[5], ins[2], ins[6], 4'b0};
 wire [4:0] rd = (is_Itype || (ins[1:0] == 2'b10)) ? ins[11:7]
   : (ins[1:0] == 2'b01) ? (ins[15] ? {1'b0,1'b1,ins[9:7]} : ins[11:7]) 
   : (ins[1:0] == 2'b00) ? {1'b0,1'b1,ins[4:2]} : 5'b0;  
+  // JALR rs1 : 
 wire [4:0] rs1 = is_Itype ? ins[19:15]
     : (ins[1:0] == 2'b10) ? ( (ins[14:13] == 2'b10) ? 5'd2 :
        (ins[15:12] == 4'b1000 && ins_6_2 != 5'b0)? 5'd0 : ins[11:7])
@@ -145,17 +147,25 @@ wire [4:0] rs1 = is_Itype ? ins[19:15]
 wire [4:0] rs2 = is_Itype ? ins[24:20]
     : (ins[1:0] == 2'b10) ? ins[6:2]
     : (ins[1:0] == 2'b01 && ins[15:14] == 2'b11) ? 5'b0 : {1'b0,1'b1,ins[4:2]};
-
+// ADDI, ADDI16SP, ANDI
 wire [11:0] immI = is_Itype ? ins[31:20] : 
   (ins[1:0] == 2'b01) ? 
-; // I_STAR merged into I
+    (((funct3 == 3'b000) || (funct3 == 3'b100)) ? {{7{ins[12]}},ins[6:2]} : 
+                        (imm_andI)) : 12'b0;
+                        // ANDI
+ // I_STAR merged into I
 
 wire [4:0] immI_star = is_Itype ? ins[24:20] : {ins[12], ins[6:2]};
 
-wire [11:0] immS = is_Itype ? {ins[31:25], ins[11:7]} : (ins[1:0] == 2'b00) ? {5'b0, ins[5], ins[12:10], ins[6], 2'b0} : {4'b0, ins[8:7], ins[12:9], 2'b0};
-wire [11:0] immB = is_Itype ? {ins[31], ins[7], ins[30:25], ins[11:8], 1'b0} : 
-  {{5{ins[12]}}, ins[6:5],ins[2],ins[11:10],ins[4:3],1'b0};
-wire [31:12] immU = ins[31:12];
+wire [31:0] immU = is_Itype ? {ins[31:12], 12'b0} : 
+// c.li, c.lui
+ins[13]? {{15{ins[12]}},ins[6:2],12'b0} : {{27{ins[12]}}, ins[6:2]};
+
+wire [11:0] immS = is_Itype ? {ins[31:25], ins[11:7]} : 
+(ins[1:0] == 2'b00) ? {5'b0, ins[5], ins[12:10], ins[6], 2'b0} 
+                    : {4'b0, ins[8:7], ins[12:9], 2'b0};
+wire [11:0] immB = is_Itype ? {ins[31], ins[7], ins[30:25], ins[11:8], 1'b0}
+                  : {{5{ins[12]}}, ins[6:5],ins[2],ins[11:10],ins[4:3],1'b0};
 // _ represent boolean
 
 
@@ -230,6 +240,7 @@ always @(posedge clk_in) begin
         LSB_ins_Type <= lsb_op;
         // RS_ins_Type <= (opcode == RISC_R || opcode == RISC_I || opcode == RISC_B) ? funct3 : 5'b00000;
         if(opcode == RISC_R) begin
+          if(is_Itype)
           case(funct3)
             3'b000: RS_ins_Type <= funct7[5]? `SUB : `ADD;
             3'b001: RS_ins_Type <= `SLL;
@@ -240,7 +251,25 @@ always @(posedge clk_in) begin
             3'b110: RS_ins_Type <= `OR;
             3'b111: RS_ins_Type <= `AND;
           endcase
+          else
+          case(ins[1:0])
+            2'b10: RS_ins_Type <= `ADD;
+            2'b01: 
+              case(ins[12]) 
+                1'b0: 
+                  case(ins[6:5])
+                    2'b00: RS_ins_Type <= `SUB;
+                    2'b01: RS_ins_Type <= `XOR;
+                    2'b10: RS_ins_Type <= `OR;
+                    2'b11: RS_ins_Type <= `AND;
+                  endcase
+                1'b1:
+                  $display("R ins[12] = 1'b1 illegal");
+              endcase
+            default: $display("R Type Wrong");
+          endcase
         end else if(opcode == RISC_I) begin
+          if(is_Itype)
           case(funct3)
             3'b000: RS_ins_Type <= `ADDI;
             3'b001: RS_ins_Type <= `SLLI;
@@ -251,8 +280,29 @@ always @(posedge clk_in) begin
             3'b110: RS_ins_Type <= `ORI;
             3'b111: RS_ins_Type <= `ANDI;
           endcase
+          else
+          case(ins[1:0])
+            2'b10: RS_ins_Type <= `SLLI;
+            2'b01: begin
+              if(funct3 == 3'b000 || funct3 == 3'b011) 
+                RS_ins_Type <= `ADDI;
+              else if(funct3 == 3'b100) begin
+                case(ins[11:10])
+                  2'b00: RS_ins_Type <= `SRLI;
+                  2'b01: RS_ins_Type <= `SRAI;
+                  2'b10: RS_ins_Type <= `ANDI;
+                  default:
+                    $display("I ins[11:10] wrong!");
+                endcase
+              end else $display("I funct3 wrong");
+            end
+            2'b00: RS_ins_Type <= `ADDI;
+            default:
+              $display("I funct3 wrong");
+          endcase
         end
         else if(opcode == RISC_B) begin
+          if(is_Itype)
           case(funct3)
             3'b000: RS_ins_Type <= `BEQ;
             3'b001: RS_ins_Type <= `BNE;
@@ -262,14 +312,18 @@ always @(posedge clk_in) begin
             3'b111: RS_ins_Type <= `BGEU;
             default: RS_ins_Type <= 5'b00000;
           endcase
+          else begin
+            RS_ins_Type <= ins[13] ? `BNE : `BEQ;
+          end
         end 
 
         rs_imm <= 
         opcode == RISC_I ? 
           (is_Itype ? ((funct3 == 3'b001 || funct3 == 3'b101)? immI_star : immI) 
-            : ((ins[1:0] == 2'b01 && ins[15:13] == 3'b100 || (ins[1:0] == 2'b10 && ins[15:13] == 3'b010)) ? immI_star : immI))
+            : (((ins[1:0] == 2'b01 && ins[15:13] == 3'b100) || (ins[1:0] == 2'b10 && ins[15:13] == 3'b010)) ? immI_star : immI))
          : opcode == RISC_B? immB :  32'b0;
-        lsb_imm <= opcode == RISC_L ? immI : immS;
+        lsb_imm <= (is_Itype && opcode == RISC_L) ? immI 
+          : immS;
 
         rs1_val <= REGF_ret_val_id1;
         _QI <= _rs1 && REGF_dep_rs1;
@@ -291,14 +345,16 @@ always @(posedge clk_in) begin
         // jump addr estimated by ROB
         case(opcode)
           JAL: begin
-            ROB_ins_value <= real_ifetcher_pc + 4;
+            ROB_ins_value <= real_ifetcher_pc + (is_Itype ? 4 : 2);
           end
           JALR: begin
-            ROB_ins_value <= real_ifetcher_pc + 4;
+            ROB_ins_value <= real_ifetcher_pc + (is_Itype ? 4 : 2);
             IFetcher_clear <= 1;
-            IFetcher_new_addr <= (REGF_ret_val_id1 + {{20{immI[10]}}, immI}) & ~32'b1;
+            // JALR  TODO
+            IFetcher_new_addr <= is_Itype ? ((REGF_ret_val_id1 + {{20{immI[10]}}, immI}) & ~32'b1) : REGF_ret_val_id1;
           end
-          LUI: ROB_ins_value <= {immU, 12'b0};
+          LUI: ROB_ins_value <= immU;
+          
           AUIPC: ROB_ins_value <= real_ifetcher_pc + {immU, 12'b0};
           RISC_B: begin
             //[pc] is branch , predict_pc result in b-predictor? 
