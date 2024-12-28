@@ -9,6 +9,7 @@ module Bpredictor (
   // insfetcher ask for prediction
   input wire [31 : 0] input_ins,
   input wire [31 : 0] input_pc,
+  input wire Itype,
   output wire [31 : 0] predict_pc,
 
   // ROB update predictor
@@ -16,26 +17,28 @@ module Bpredictor (
   input wire [31 : 0] ins_pc // pc[0] actual jump or not? 
 );
   localparam RISC_B = 7'b1100011;
-  reg [1:0] state[127:0];
+  reg [1:0] state[255:0];
 
 wire predict_jump = input_ins[6:0] == RISC_B? state[input_pc[8:2]][1] : 1'b0;
-assign predict_pc = predict_jump? input_pc + {{20{input_ins[31]}},input_ins[7], input_ins[30:25], input_ins[11:8], 1'b1} : input_pc + 4;
+wire [11:0] immB = Itype ? {input_ins[31], input_ins[7], input_ins[30:25], input_ins[11:8], 1'b0}
+                  : {{5{input_ins[12]}}, input_ins[6:5],input_ins[2],input_ins[11:10],input_ins[4:3],1'b0};
+assign predict_pc = predict_jump? input_pc + {{20{immB[11]}},immB[10:1], 1'b1} : input_pc + (Itype?4:2);
 
 integer i;
 always @(posedge clk_in) begin
   if(rst_in) begin
-    for(i = 0; i < 128; i = i + 1) begin
+    for(i = 0; i < 256; i = i + 1) begin
       state[i] <= 2'b01;
     end
   end else begin
     if(ROB_valid) 
       begin
         if(ins_pc[0]) begin
-          if(state[ins_pc[8:2]] != 2'b11)
-            state[ins_pc[8:2]] <=   state[ins_pc[8:2]] + 1;
+          if(state[ins_pc[8:1]] != 2'b11)
+            state[ins_pc[8:1]] <=   state[ins_pc[8:1]] + 1;
         end else begin
-          if(state[ins_pc[8:2]] != 2'b00)
-            state[ins_pc[8:2]] <=   state[ins_pc[8:2]] - 1;
+          if(state[ins_pc[8:1]] != 2'b00)
+            state[ins_pc[8:1]] <=   state[ins_pc[8:1]] - 1;
         end
     end
   end

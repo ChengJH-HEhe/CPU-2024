@@ -28,6 +28,7 @@ module IFetcher (
     // b-predictor
     output wire [31 : 0] branch_ins,
     output wire [31 : 0] branch_pc,
+    output wire Itype,
     input wire [31 : 0] predict_pc,
 
     // ROB JALR
@@ -38,7 +39,12 @@ module IFetcher (
 localparam JAL = 7'b1101111;
 localparam JALR = 7'b1100111;
 
-wire [20:1] immJ = {input_ins[31], input_ins[19:12], input_ins[20], input_ins[30:21]};
+wire is_Itype = input_ins[1:0] == 2'b11;
+assign Itype = is_Itype;
+// jal 12-11-10:9-8-7-6-5:3-2
+// imm[11|4|9:8|10|6|7|3:1|5]
+wire [20:1] immJ = is_Itype ? {input_ins[31], input_ins[19:12], input_ins[20], input_ins[30:21]}
+        : {{10{input_ins[12]}},input_ins[8], input_ins[10:9], input_ins[6], input_ins[7], input_ins[2], input_ins[11], input_ins[5:3]};
 reg [2:0] state; // 0: IDLE, 1: BUSY waiting 2: stall!
 reg [31 : 0] pc;
 assign branch_ins = input_ins;
@@ -93,7 +99,7 @@ always @(posedge clk_in) begin
         if(~stall && input_ins_ready) begin
             // instruction ready, special : JAL
             // // $display("ins_pc = %d, immJ = %d", pc, immJ);
-            if(input_ins[6:0] == JAL) begin
+            if((is_Itype && input_ins[6:0] == JAL) || (!is_Itype && input_ins[1:0] == 2'b01 && input_ins[14:13] == 2'b01)) begin
                 pc <= pc + {{11{immJ[20]}}, immJ, 1'b0};
                 predict_nxt_pc <= pc + {{11{immJ[20]}}, immJ, 1'b0}; // inform the decoder of predictor result
                 // $display("%h -> %h", pc + immJ, pc + {{11{immJ[20]}}, immJ, 1'b0});

@@ -1,7 +1,7 @@
 `include "const.v"
 
-`define TAG_INTERVAL 17:11
-`define SUB_INTERVAL 10:2
+`define TAG_INTERVAL 17:10
+`define SUB_INTERVAL 9:1
 `define CACHE_INTERVAL 511:0
 
 module ICache (

@@ -44,6 +44,7 @@ wire rdy_ifetcher_icache, fetch_able_icache_ifetcher;
 // b-predictor<->ifetcher
 wire [31 : 0] branch_ins_bp_ifetcher, branch_pc_bp_ifetcher, predict_pc_ifetcher_bp;
 
+wire Itype_br_if;
 // ROB_jalr <-> ifetcher
 
 // rob_bp pc, ins
@@ -202,6 +203,7 @@ ICache icache(
 );
 
 IFetcher ifetcher(
+  .Itype(Itype_br_if),
   .stall(stall_ifetcher_decoder),
   .jalr_clear(clear_ifetcher_decoder),
   .jalr_pc(pc_ifetcher_decoder),
@@ -355,6 +357,7 @@ Bpredictor bpredictor(
   .rdy_in(rdy_in),
   .input_ins(branch_ins_bp_ifetcher),
   .input_pc(branch_pc_bp_ifetcher),
+  .Itype(Itype_br_if),
   .predict_pc(predict_pc_ifetcher_bp),
   .ROB_valid(rdy_commit_public),
   .ins_pc(pc_fact_rob_public)
