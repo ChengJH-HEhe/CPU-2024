@@ -101,19 +101,55 @@ localparam LUI = 7'b0110111;
 localparam AUIPC = 7'b0010111;
 
 // wire decode input inst immediately
-wire [6:0] opcode = ins[6:0];
-wire [2:0] funct3 = ins[14:12];
+wire is_Itype = ins[1:0] == 2'b11;
+
+wire [2:0] funct3 = is_Itype ? ins[14:12] : ins[15:13];
+wire [3:0] funct4 = is_Itype ? 4'b0 : ins[15:12];
 wire [6:0] funct7 = ins[31:25];
-wire [4:0] rd = ins[11:7];
-wire [4:0] rs1 = ins[19:15];
-wire [4:0] rs2 = ins[24:20];
+wire [4:0] ins_6_2 = ins[6:2];
+wire [4:0] ins_11_7 = ins[11:7];
+wire [1:0] ins_11_10 = ins[11:10];
+wire [2:0] ins_9_7 = ins[9:7];
+
+
+// wire [20:1] immJ = {ins[31], ins[19:12], ins[20], ins[30:21], 1'b0}; unused
+
+wire [6:0] opcode = is_Itype ? ins[6:0]: //C-type
+  (ins[1:0] == 2'b10) ?
+    ((funct3 == 3'b000) ? RISC_I :  // SLLI
+    (funct3 == 3'b010) ? RISC_L :  // LWSP
+    (funct4 == 4'b1000) ? (ins_6_2 == 5'b0 ? JAL : RISC_I) : // JR, MV
+    (funct4 == 4'b1001) ? (ins_6_2 == 5'b0 ? JALR : RISC_R) : // JALR, ADD
+    (funct3 == 3'b110) ? RISC_S : 7'b0) // SWSP 7
+ : (ins[1:0] == 2'b01)?
+    ((funct3 == 3'b000) ? RISC_I :  // ADDI
+    (funct3 == 3'b001) ? JAL :  // JAL
+    (funct3 == 3'b010) ? LUI :  // LI in c-type immli_u be calced
+    (funct3 == 3'b011) ? (ins_11_7 == 2 ? RISC_I : LUI) :  // ADDI16SP : LUI
+    (funct4 == 3'b100) ? (ins_11_10 == 2'b11 ? RISC_R : RISC_I) : // SRLI, SRAI, ANDI/ SUB,XOR,OR,AND 
+    (funct4 == 3'b101) ? JAL : // J
+                        RISC_B) // 110: BEQZ 111:BNEZ 15
+  // ins[1:0] == 2'b00
+ : (funct3 == 3'b000) ? RISC_I : // ADDI4SPN
+ (funct3 == 3'b010) ? RISC_L : // LW
+ (funct3 == 3'b110) ? RISC_S : 7'b0 // SW 3
+;
+wire [4:0] rd = (is_Itype || (ins[1:0] == 2'b10)) ? ins[11:7]
+  : (ins[1:0] == 2'b01) ? (ins[15] ? {1'b0,1'b1,ins[9:7]} : ins[11:7]) 
+  : (ins[1:0] == 2'b00) ? {1'b0,1'b1,ins[4:2]} : 5'b0;  
+wire [4:0] rs1 = is_Itype ? ins[19:15]
+    : (ins[1:0] == 2'b10) ? ins[11:7]
+    : (ins[1:0] == 2'b01) ? (ins[15] ? {1'b0,1'b1,ins[9:7]} : ins[11:7])
+    : (ins[1:0] == 2'b00) ? {1'b0,1'b1,ins[9:7]} : 5'b0;
+wire [4:0] rs2 = is_Itype ? ins[24:20]
+    : (ins[1:0] == 2'b10) ? ins[6:2]
+    : {1'b0,1'b1,ins[4:2]};
+    
 wire [11:0] immI = ins[31:20]; // I_STAR merged into I
 wire [4:0] immI_star = ins[24:20];
 wire [11:0] immS = {ins[31:25], ins[11:7]};
 wire [11:0] immB = {ins[31], ins[7], ins[30:25], ins[11:8], 1'b0};
 wire [31:12] immU = ins[31:12];
-// wire [20:1] immJ = {ins[31], ins[19:12], ins[20], ins[30:21], 1'b0}; unused
-
 // _ represent boolean
 
 

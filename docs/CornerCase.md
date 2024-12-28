@@ -27,3 +27,7 @@ calc:
 12.25. icache, pc predict width mistaken(1->32)
 12.26. rs, lsb, update dep, reg name mistaken.
 12.27. load not head, rd_head != commit_id
+
+### c-extension:
+
+opcode determine the 0~15
