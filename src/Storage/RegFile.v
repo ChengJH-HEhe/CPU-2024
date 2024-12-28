@@ -77,7 +77,8 @@ module RegFile (
       begin
         file = $fopen("debug.txt","a");
         for(i = 0; i < 32; i = i + 1) begin
-          $fwrite(file, "%d", regs[i]);
+          if(i == 1)
+            $fwrite(file, "%d", regs[i]);
         end
         $fwrite(file, "\n");
         $fclose(file);

@@ -118,15 +118,17 @@ wire [6:0] opcode = is_Itype ? ins[6:0]: //C-type
   (ins[1:0] == 2'b10) ?
     ((funct3 == 3'b000) ? RISC_I :  // SLLI
     (funct3 == 3'b010) ? RISC_L :  // LWSP
-    (funct3 == 3'b100) ? (ins_6_2 == 5'b0 ? JALR : RISC_R) : // JR, MV
-     // JALR, ADD
+    (funct3 == 3'b100) ? (ins_6_2 == 5'b0 ? JALR : RISC_R) : 
+      // ins[11] = 0 JR, MV
+      // funct3 = 3'b100 ins[11] = 1 JALR, ADD
     (funct3 == 3'b110) ? RISC_S : 7'b0) // SWSP 7
  : (ins[1:0] == 2'b01)?
     ((funct3 == 3'b000) ? RISC_I :  // ADDI
     (funct3 == 3'b001) ? JAL :  // JAL
     (funct3 == 3'b010) ? LUI :  // LI in c-type immli_u be calced
     (funct3 == 3'b011) ? (ins_11_7 == 2 ? RISC_I : LUI) :  // ADDI16SP , LUI
-    (funct3 == 3'b100) ? (ins_11_10 == 2'b11 ? RISC_R : RISC_I) : // SRLI, SRAI, ANDI/ SUB,XOR,OR,AND 
+    (funct3 == 3'b100) ? (ins_11_10 == 2'b11 ? RISC_R : RISC_I) : 
+     // SRLI, SRAI, ANDI/ SUB,XOR,OR,AND 
     (funct3 == 3'b101) ? JAL : // J 
                         RISC_B) // 110: BEQZ 111:BNEZ 15
   // ins[1:0] == 2'b00
@@ -135,7 +137,9 @@ wire [6:0] opcode = is_Itype ? ins[6:0]: //C-type
  (funct3 == 3'b110) ? RISC_S : 7'b0 // SW 3
 ;
 wire [11:0] imm_andI = {{3{ins[12]}}, ins[4:3], ins[5], ins[2], ins[6], 4'b0};
-wire [4:0] rd = (is_Itype || (ins[1:0] == 2'b10)) ? ins[11:7]
+wire [4:0] rd = (is_Itype)? ins[11:7] : 
+  (ins[1:0] == 2'b10) ? 
+    ((funct4 == 4'b1001 && ins_6_2 == 5'b0) ? 5'b1 : ins[11:7])
   : (ins[1:0] == 2'b01) ? (funct3 == 3'b101) ? 5'b0 : // j
   (ins[15] ? {1'b0,1'b1,ins[9:7]} : // 1 
   (funct3 == 3'b001) ? 5'b1 : // jal
@@ -148,17 +152,20 @@ wire [4:0] rs1 = is_Itype ? ins[19:15]
     : (ins[1:0] == 2'b01) ? 
       (ins[15] ? {1'b0,1'b1,ins[9:7]} : // other R
         ins[11:7]) 
-    : (ins[1:0] == 2'b00) ? {1'b0,1'b1,ins[9:7]} : 5'b0;
+    : (ins[1:0] == 2'b00) ? ((funct3 == 3'b000) ? 5'b10 : {1'b0,1'b1,ins[9:7]}) : 5'b0;
     // MV 0
 wire [4:0] rs2 = is_Itype ? ins[24:20]
     : (ins[1:0] == 2'b10) ? ins[6:2]
     : (ins[1:0] == 2'b01 && ins[15:14] == 2'b11) ? 5'b0 : {1'b0,1'b1,ins[4:2]};
-// ADDI, ADDI16SP, ANDI
+// ADDI, ADDI16SP, ANDI, ADDI4SPN
 wire [11:0] immI = is_Itype ? ins[31:20] : 
   (ins[1:0] == 2'b01) ? 
-    (((funct3 == 3'b000) || (funct3 == 3'b100)) ? {{7{ins[12]}},ins[6:2]} : 
-                        (imm_andI)) : 12'b0;
                         // ANDI
+    (((funct3 == 3'b000) || (funct3 == 3'b100)) ? {{7{ins[12]}},ins[6:2]} : 
+                        (imm_andI)) :
+                        // 12-11 10-7 6 5
+                        // ADDI4SPN 
+  (ins[1:0] == 2'b00) ? {2'b0,ins[10:7],ins[12:11],ins[5],ins[6],2'b0}:12'b0;
  // I_STAR merged into I
 
 wire [4:0] immI_star = is_Itype ? ins[24:20] : {ins[12], ins[6:2]};
@@ -167,9 +174,11 @@ wire [31:0] immU = is_Itype ? {ins[31:12], 12'b0} :
 // c.li, c.lui
 ins[13]? {{15{ins[12]}},ins[6:2],12'b0} : {{27{ins[12]}}, ins[6:2]};
 
+// lw(sp) still here
 wire [11:0] immS = is_Itype ? {ins[31:25], ins[11:7]} : 
 (ins[1:0] == 2'b00) ? {5'b0, ins[5], ins[12:10], ins[6], 2'b0} 
-                    : {4'b0, ins[8:7], ins[12:9], 2'b0};
+                    : ins[15]? {4'b0, ins[8:7], ins[12:9], 2'b0}
+                        : {4'b0, ins[3:2],ins[12],ins[6:4],2'b0};
 wire [11:0] immB = is_Itype ? {ins[31], ins[7], ins[30:25], ins[11:8], 1'b0}
                   : {{5{ins[12]}}, ins[6:5],ins[2],ins[11:10],ins[4:3],1'b0};
 // _ represent boolean
@@ -322,7 +331,7 @@ always @(posedge clk_in) begin
             RS_ins_Type <= ins[13] ? `BNE : `BEQ;
           end
         end 
-
+        // $display("pc=%h rd=%d,rs1=%d,rs2=%d, rs_imm=%d, lsb_imm=%d", real_ifetcher_pc, rd,rs1,rs2,rs_imm, lsb_imm);
         rs_imm <= 
         opcode == RISC_I ? 
           (is_Itype ? ((funct3 == 3'b001 || funct3 == 3'b101)? immI_star : immI) 

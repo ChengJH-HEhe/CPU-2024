@@ -137,14 +137,14 @@ module ReorderBuffer #(
                 ready[head] <= 0;
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
-                // if(commit_times % 2000 == 0)
+                if(commit_times)
                     $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
                 begin
                     file = $fopen("debug.txt","a");
                     $fwrite(file, "commit_%d id = [%d]: addr = [%h]\n", 
                     commit_times, head, insAddr[head]);
                     $fclose(file);
-                    $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
+                    // $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
                     // $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
                 end
                 // output 
