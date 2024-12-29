@@ -33,7 +33,9 @@ module RegFile (
 
   output wire [`ROB_WIDTH_BIT - 1 : 0] rs2_id,
   input wire rs2_ready,
-  input wire [31 : 0] rs2_val
+  input wire [31 : 0] rs2_val,
+
+  input wire real_commit
   // RS op1, op2, free dependency? 
   // input wire [31:0] regF_print
 );
@@ -74,14 +76,14 @@ module RegFile (
       end
     end else if (!rdy_in) begin
     end else begin
+      if(real_commit)
       begin
-        file = $fopen("debug.txt","a");
-        for(i = 0; i < 32; i = i + 1) begin
-          if(i == 1)
-            $fwrite(file, "%d", regs[i]);
-        end
-        $fwrite(file, "\n");
-        $fclose(file);
+        // file = $fopen("debug.txt","a");
+        // for(i = 0; i < 32; i = i + 1) begin
+        //     $fdisplay(file, "%d", regs[i]);
+        // end
+        // $fwrite(file, "\n");
+        // $fclose(file);
       end
       if(clear_flag) begin
         for(i = 0; i < 32; i = i + 1) begin

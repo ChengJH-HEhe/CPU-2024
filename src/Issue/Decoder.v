@@ -331,11 +331,12 @@ always @(posedge clk_in) begin
             RS_ins_Type <= ins[13] ? `BNE : `BEQ;
           end
         end 
-        // $display("pc=%h rd=%d,rs1=%d,rs2=%d, rs_imm=%d, lsb_imm=%d", real_ifetcher_pc, rd,rs1,rs2,rs_imm, lsb_imm);
+        // if(pc == 32'h288)
+        //   $display("pc=%h rd=%d,rs1=%d,rs2=%d, rs_imm=%d, lsb_imm=%d", real_ifetcher_pc, rd,rs1,rs2,rs_imm, lsb_imm);
         rs_imm <= 
         opcode == RISC_I ? 
           (is_Itype ? ((funct3 == 3'b001 || funct3 == 3'b101)? immI_star : immI) 
-            : (((ins[1:0] == 2'b01 && ins[15:13] == 3'b100) || (ins[1:0] == 2'b10 && ins[15:13] == 3'b010)) ? immI_star : immI))
+            : (((ins[1:0] == 2'b01 && ins[15:13] == 3'b100) || (ins[1:0] == 2'b10 && ins[15:13] == 3'b000)) ? immI_star : immI))
          : opcode == RISC_B? immB :  32'b0;
         lsb_imm <= (is_Itype && opcode == RISC_L) ? immI 
           : immS;

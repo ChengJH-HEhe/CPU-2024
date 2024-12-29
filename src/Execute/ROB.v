@@ -58,7 +58,8 @@ module ReorderBuffer #(
         output wire ready_commit, // commit id
         output wire rob_head_l_or_s,
         output wire [4:0] rob_head,
-        output wire [31:0] commit_tim
+        output wire [31:0] commit_tim,
+        output reg real_commit
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
     reg [31 : 0] commit_times;
@@ -83,7 +84,7 @@ module ReorderBuffer #(
     integer i, file;
 
     always @(posedge clk_in) begin
-
+        real_commit <= 0;
         if (rst_in || (clear_flag && rdy_in)) begin
             clear_flag <= 0;
             if(rst_in) begin
@@ -137,16 +138,17 @@ module ReorderBuffer #(
                 ready[head] <= 0;
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
-                if(commit_times)
-                    $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
-                begin
-                    file = $fopen("debug.txt","a");
-                    $fwrite(file, "commit_%d id = [%d]: addr = [%h]\n", 
-                    commit_times, head, insAddr[head]);
-                    $fclose(file);
-                    // $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
-                    // $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
-                end
+                real_commit <= 1'b1;
+                // if(commit_times % 1000 == 0)
+                //     $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
+                // begin
+                //     file = $fopen("debug.txt","a");
+                //     $fwrite(file, "commit_%d id = [%d]: addr = [%h]\n", 
+                //     commit_times, head, insAddr[head]);
+                //     $fclose(file);
+                //     // $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
+                //     // $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
+                // end
                 // output 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.

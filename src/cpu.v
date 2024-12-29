@@ -34,6 +34,8 @@ module cpu(
 // format name-receiver-sender
 // Decoder
 
+wire real_com;
+
 wire rdy_decoder_ifetcher;
 wire [31 : 0] pc_decoder_ifetcher, ins_decoder_ifetcher, predict_pc_decoder_ifetcher;
 wire stall_ifetcher_decoder;
@@ -279,6 +281,7 @@ ALU alu(
 );
 
 ReorderBuffer rob(
+  .real_commit(real_com),
   .clk_in(clk_in),
   .rst_in(rst_in),
   .rdy_in(rdy_in),
@@ -325,6 +328,7 @@ ReorderBuffer rob(
 // outports wire
 
 RegFile u_RegFile(
+  .real_commit(real_com),
   .clk_in       	( clk_in        ),
   .rst_in       	( rst_in        ),
   .rdy_in       	( rdy_in        ),
