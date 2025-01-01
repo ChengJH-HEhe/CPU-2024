@@ -139,8 +139,8 @@ module ReorderBuffer #(
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
                 real_commit <= 1'b1;
-                // if(commit_times % 1000 == 0)
-                //     $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
+                // if(commit_times % 10 == 0)
+                    $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
                 // begin
                 //     file = $fopen("debug.txt","a");
                 //     $fwrite(file, "commit_%d id = [%d]: addr = [%h]\n", 

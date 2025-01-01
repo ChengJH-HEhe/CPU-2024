@@ -90,6 +90,7 @@ always @(posedge clk_in) begin
         end
       end
       3'b001 :begin // load
+      // if(~io_buffer_full || addr_ram != 196608 && addr_ram != 196612) begin
         case(state)
           3'b001 :begin
             lsb_val[7:0] <= data_ram_in;
@@ -131,8 +132,10 @@ always @(posedge clk_in) begin
           state <= state + 1;
           addr_ram <= addr_ram + 1;
         end
+      // end
       end
-      3'b010 : begin // store
+      3'b010 : begin
+      // if(~io_buffer_full || addr_ram != 196608 && addr_ram != 196612) begin // store
         ram_type <= 1'b1;
         if(state != total) begin
           state <= state + 1;
