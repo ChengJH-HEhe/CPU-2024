@@ -14,6 +14,8 @@ module MemCtrl (
   input wire io_buffer_full,
 
   // to load,store
+
+
   output reg lsb_val_ready, // mem_val valid
   output reg [31 : 0] lsb_val,
 
@@ -45,11 +47,13 @@ always @(posedge clk_in) begin
     status <= 0;
     total <= 0;
     ins <= 0;
+
     ins_ready <= 0;
     lsb_val_ready <= 0;
+
     lsb_val <= 0;
     ram_type <= 0;
-    addr_ram <= 32'hffffffff;
+    addr_ram <= 32'b0;
     data_ram <= 0;
   end else if(~rdy_in) begin
   end else begin
@@ -57,23 +61,26 @@ always @(posedge clk_in) begin
     //   $display("is_S: %d fuck inst[28] = %d", ram_type, data_ram_in);
     // end
     case(status)
-      3'b000 :begin
+      3'b000 : begin
         // next circle not available
         ins_ready <= 1'b0;
         lsb_val_ready <= 1'b0;
         state <= 3'b000;
         if(lsb_need) begin
-          // load store prior.
-          // load 1, store 2
-          status <= op[3] ? 3'b010 : 3'b001;
-          ram_type <= op[3];
-          case(op[1:0]) 
-            2'b00 : total <= 3'b001;
-            2'b01 : total <= 3'b010;
-            2'b10 : total <= 3'b100;
-          endcase
-          addr_ram <= addr;
-          data_ram <= op[3] ? data[7:0] : 8'b0;
+          if(~io_buffer_full || addr != 196608 && addr != 196612)
+          begin
+            // load store prior.
+            // load 1, store 2
+            status <= op[3] ? 3'b010 : 3'b001;
+            ram_type <= op[3];
+            case(op[1:0]) 
+              2'b00 : total <= 3'b001;
+              2'b01 : total <= 3'b010;
+              2'b10 : total <= 3'b100;
+            endcase
+            addr_ram <= addr;
+            data_ram <= op[3] ? data[7:0] : 8'b0;
+          end
         end else if(iCache_need) begin
           status <= 3'b011; // FETCH
           total <= 3'b100;
@@ -84,13 +91,12 @@ always @(posedge clk_in) begin
         end else begin
           status <= 3'b0;
           total <= 3'b0;
-          addr_ram <= 32'hffffffff;
+          addr_ram <= 32'b0;
           data_ram <= 8'b0;
           ram_type <= 1'b0;
         end
       end
       3'b001 :begin // load
-      // if(~io_buffer_full || addr_ram != 196608 && addr_ram != 196612) begin
         case(state)
           3'b001 :begin
             lsb_val[7:0] <= data_ram_in;
@@ -132,10 +138,9 @@ always @(posedge clk_in) begin
           state <= state + 1;
           addr_ram <= addr_ram + 1;
         end
-      // end
       end
       3'b010 : begin
-      // if(~io_buffer_full || addr_ram != 196608 && addr_ram != 196612) begin // store
+      if(~io_buffer_full || addr_ram != 196608 && addr_ram != 196612) begin // store
         ram_type <= 1'b1;
         if(state != total) begin
           state <= state + 1;
@@ -153,6 +158,7 @@ always @(posedge clk_in) begin
           data_ram <= 8'b0;
           ram_type <= 1'b0;
         end
+      end
       end
       3'b011 : begin // FETCH
         ram_type <= 1'b0;

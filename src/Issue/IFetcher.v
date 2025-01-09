@@ -66,7 +66,6 @@ always @(posedge clk_in) begin
         to_Cache_pc <= 32'b0;
         fetch_able <= 1'b0;
         output_ins_ready <= 1'b0;
-
         pc <= {br_pc[31:1], 1'b0};
         state <= 2'b00;
     end else if(jalr_clear) begin
@@ -76,41 +75,38 @@ always @(posedge clk_in) begin
 
         pc <= jalr_pc;
         // $display("pc = %h", jalr_pc);
-        state <= 2'b01;
+        state <= 2'b00;
 
     end else if(state == 2'b00) begin
         // ready to fetch
         if(stall) begin
             fetch_able <= 1'b0;
-            output_ins_ready <= 1'b0;
             to_Cache_pc <= 32'b0;
-
-            output_pc <= 0; 
         end else begin
             fetch_able <= 1'b1;
             output_ins_ready <= 1'b0;
             to_Cache_pc <= pc;
 
-            state <= 1'b1;
+            state <= 2'b01;
             output_pc <= 0;
         end
     end else if(state == 2'b01) begin
-        // is waiting
+        // is waiting for instruction
         if(~stall && input_ins_ready) begin
             // instruction ready, special : JAL
             // // $display("ins_pc = %d, immJ = %d", pc, immJ);
+            // JAL!  // JAL!
             if((is_Itype && input_ins[6:0] == JAL) || (!is_Itype && input_ins[1:0] == 2'b01 && input_ins[14:13] == 2'b01)) begin
                 pc <= pc + {{11{immJ[20]}}, immJ, 1'b0};
                 predict_nxt_pc <= pc + {{11{immJ[20]}}, immJ, 1'b0}; // inform the decoder of predictor result
                 // $display("%h -> %h", pc + immJ, pc + {{11{immJ[20]}}, immJ, 1'b0});
             end else if(input_ins[6:0] == JALR) begin
-                state <= 2'b10;
+                state <= 2'b10; // JALR? nop
             end else begin
-                pc <= predict_pc; // next_circle
+                pc <= {predict_pc[31:1],1'b0}; // next_circle
                 predict_nxt_pc <= predict_pc;
                 // $display("%h ::-> %h", pc, predict_pc);
             end
-
             fetch_able <= 0;
 
             output_ins <= input_ins;

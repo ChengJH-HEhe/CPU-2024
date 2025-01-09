@@ -45,13 +45,13 @@ module LSB #(
   output reg [4 : 0] lsb_ROB_id,
   output reg [31 : 0] lsb_val,
   output wire lsb_full,
-  input wire [31 : 0] lsb_commit_times
+  input wire [31 : 0] lsb_commit_times,
+  input wire [31 : 0] rd_head_addr
 );
 localparam LSB_SIZE = 1 << LSB_SIZE_BIT;
 reg [LSB_SIZE_BIT - 1 : 0] head, tail;
 reg [1 : 0] ticker;
 wire is_Qi_, is_Qj_;
-wire [4: 0] Qi_, Qj_;
 wire [31: 0] Vi_, Vj_;
 wire full;
 
@@ -62,16 +62,14 @@ assign lsb_full = full;
 // determine input Qi 
 assign is_Qi_ = is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id);
 assign is_Qj_ = is_Qj && (!lsb_ready || Qj != lsb_ROB_id) && (!rs_ready || Qj != rs_ROB_id); 
-assign Qi_ = is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id) ? Qi : 0;
-assign Qj_ = is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id) ? Qj : 0;
 
 // determine input Vi, Vj
-assign Vi_ = lsb_ready && Qi == lsb_ROB_id ? lsb_val : 
+assign Vi_ = !is_Qi ? ins_value1 : (lsb_ready && Qi == lsb_ROB_id ? lsb_val : 
             rs_ready && Qi == rs_ROB_id ? rs_val : 
-            ins_value1;
-assign Vj_ = lsb_ready && Qj == lsb_ROB_id ? lsb_val : 
+            ins_value1);
+assign Vj_ = !is_Qj ? ins_value2 : (lsb_ready && Qj == lsb_ROB_id ? lsb_val : 
             rs_ready && Qj == rs_ROB_id ? rs_val : 
-            ins_value2;
+            ins_value2);
 
 reg valid[(1 << LSB_SIZE_BIT) - 1 : 0]; // exist elements
 reg [LSB_TYPE_BIT - 1 : 0] Type[(1 << LSB_SIZE_BIT) - 1 : 0]; 
@@ -151,6 +149,14 @@ always @(posedge clk_in) begin
             op <= Type[head];
             ticker <= (Type[head][3])? 2'b10 : 2'b01;
             lsb_ROB_id <= rd_head;
+            file = $fopen("lsb_debug.txt","a");
+            if(Type[head][3]) begin
+              $fwrite(file,"store[%d]: addr=%d, data=%d\n", lsb_commit_times, addr_head, value2[head]);
+            end else begin
+              $fwrite(file, "load[%d]: addr=%d\n",lsb_commit_times, addr_head);
+            end
+            $fclose(file);
+            
         end
       end
       2'b01: begin // LOAD
@@ -192,12 +198,15 @@ always @(posedge clk_in) begin
       rd[tail] <= ins_rd;
       value1[tail] <= Vi_;
       value2[tail] <= Vj_;
-      _Qi[tail] <= is_Qi && (!lsb_ready || Qi != lsb_ROB_id) && (!rs_ready || Qi != rs_ROB_id);
-      _Qj[tail] <= is_Qj_ && (!lsb_ready || Qj != lsb_ROB_id) && (!rs_ready || Qj != rs_ROB_id);
+      _Qi[tail] <= is_Qi_;
+      _Qj[tail] <= is_Qj_;
       lsb_Qi[tail] <= Qi;
       lsb_Qj[tail] <= Qj;
       lsb_imm[tail] <= {{20{imm[11]}}, imm[11:0]};
-      //  $display("vi=%d vj=%d imm=%d RD=%d", Vi_, Vj_, imm, ins_rd);
+      file = $fopen("lsb_debug.txt","a");
+       $fdisplay(file, "commit=%d [%b:%d]%d [%b:%d]%d imm=%d RD=%d", lsb_commit_times,is_Qi_,Qi, Vi_,
+        is_Qj_,Qj, Vj_, imm, ins_rd);
+      $fclose(file);
     end
     // delete dependency
     if (rs_ready) begin // result ok

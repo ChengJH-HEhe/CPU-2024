@@ -1,13 +1,14 @@
 // riscv top module file
 // modification allowed for debugging purposes
 module riscv_top #(
-    parameter SIM = 1  // whether in simulation
+    parameter SIM = 0  // whether in simulation
 ) (
     input  wire EXCLK,
     input  wire btnC,
     output wire Tx,
     input  wire Rx,
-    output wire led
+    output wire led,
+    output wire [15:1] led1
 );
 
   localparam SYS_CLK_FREQ = 100000000;
@@ -75,7 +76,6 @@ module riscv_top #(
       .mem_a         (cpu_mem_a),
       .mem_wr        (cpu_mem_wr),
       .io_buffer_full(cpu_io_buffer_full),
-
       .dbgreg_dout(cpu_dbgreg_dout)
   );
 

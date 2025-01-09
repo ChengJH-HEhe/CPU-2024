@@ -54,6 +54,7 @@ module Decoder (
   output wire [4 : 0] RS_Qi,
   output wire [4 : 0] RS_Qj,
   output wire [4 : 0] RS_rob_id,
+  output reg RS_Itype,
 
   input wire lsb_full,
   // output to LSB
@@ -102,7 +103,6 @@ localparam AUIPC = 7'b0010111;
 
 // wire decode input inst immediately
 wire is_Itype = ins[1:0] == 2'b11;
-
 wire [2:0] funct3 = is_Itype ? ins[14:12] : ins[15:13];
 wire [3:0] funct4 = is_Itype ? 4'b0 : ins[15:12];
 wire [6:0] funct7 = ins[31:25];
@@ -184,7 +184,7 @@ wire [11:0] immB = is_Itype ? {ins[31], ins[7], ins[30:25], ins[11:8], 1'b0}
 // _ represent boolean
 
 
-wire _rs1 = opcode == RISC_R || opcode == RISC_I || opcode == RISC_S || opcode == RISC_B || opcode == JALR;
+wire _rs1 = opcode == RISC_R || opcode == RISC_I || opcode == RISC_S || opcode == RISC_B || opcode == RISC_L || opcode == JALR;
 wire _rs2 = opcode == RISC_R || opcode == RISC_S || opcode == RISC_B;
 wire _lsb = (opcode == RISC_S || opcode == RISC_L);
 wire _rs = (opcode == RISC_B || opcode == RISC_R || opcode == RISC_I);
@@ -202,7 +202,7 @@ wire _work = (!_lsb || !lsb_full) && (!_rs || !rs_full) && !rob_full && (!_Jalr 
 always @(posedge clk_in) begin
   if(rst_in) begin
     // reset all output reg
-    last_addr <= 32'b0;
+    last_addr <= 32'hffffffff;
     ROB_inst_valid <= 0;
     ROB_inst_ready <= 0;
     ROB_ins_value <= 0;
@@ -228,7 +228,6 @@ always @(posedge clk_in) begin
     QI <= 0;
     QJ <= 0;
     ins_rob_id <= 0;
-    last_addr <= 32'hffffffff;
 
   end else begin
     // default config
@@ -333,6 +332,8 @@ always @(posedge clk_in) begin
         end 
         // if(pc == 32'h288)
         //   $display("pc=%h rd=%d,rs1=%d,rs2=%d, rs_imm=%d, lsb_imm=%d", real_ifetcher_pc, rd,rs1,rs2,rs_imm, lsb_imm);
+        RS_Itype <= is_Itype;
+
         rs_imm <= 
         opcode == RISC_I ? 
           (is_Itype ? ((funct3 == 3'b001 || funct3 == 3'b101)? immI_star : immI) 

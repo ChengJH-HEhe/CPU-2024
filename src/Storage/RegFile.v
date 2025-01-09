@@ -76,15 +76,15 @@ module RegFile (
       end
     end else if (!rdy_in) begin
     end else begin
-      if(real_commit)
-      begin
-        // file = $fopen("debug.txt","a");
-        // for(i = 0; i < 32; i = i + 1) begin
-        //     $fdisplay(file, "%d", regs[i]);
-        // end
-        // $fwrite(file, "\n");
-        // $fclose(file);
-      end
+      // if(real_commit)
+      // begin
+      //   file = $fopen("debug.txt","a");
+      //   for(i = 0; i < 32; i = i + 1) begin
+      //       $fdisplay(file, "%d", regs[i]);
+      //   end
+      //   $fwrite(file, "\n");
+      //   $fclose(file);
+      // end
       if(clear_flag) begin
         for(i = 0; i < 32; i = i + 1) begin
           Qi[i] <= 0;

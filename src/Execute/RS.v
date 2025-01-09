@@ -18,6 +18,7 @@ module RS #(
   input wire is_Qj,
   input wire [4 : 0] Qi,
   input wire [4 : 0] Qj,
+  input wire ins_Itype,
   input wire [31 : 0] Imm_in,
   input wire [31 : 0] Pc_in,
   input wire [4 : 0] ROB_id,
@@ -32,6 +33,7 @@ module RS #(
   output reg [31 : 0] imm,
   output reg [4 : 0] rd,
   output reg [31:0] pc,
+  output reg Itype,
   
   // from LSB calc ready direct update
   input wire lsb_ready,
@@ -54,6 +56,7 @@ reg [`RS_TYPE - 1 : 0] Type[0 : RS_SIZE - 1]; // 0: NOP, 1: rs-ALU, 2: lsb-MEM, 
 reg [31 : 0] rs1[0 : RS_SIZE - 1];
 reg [31 : 0] rs2[0 : RS_SIZE - 1];
 reg [31 : 0] Imm[0 : RS_SIZE - 1];
+reg _Itype[0 : RS_SIZE - 1];
 reg [4 : 0] Rd[0 : RS_SIZE - 1];
 reg [31:0] Pc[0 : RS_SIZE - 1];
 reg _is_Qi[0 : RS_SIZE - 1];
@@ -80,13 +83,23 @@ assign full = ready_add == RS_SIZE;
 wire _is_Qi_ = (lsb_ready && lsb_rob_id == Qi) ? 0 : (rs_ready && rs_ROB_id == Qi) ? 0: is_Qi;
 wire _is_Qj_ = (lsb_ready && lsb_rob_id == Qj) ? 0 : (rs_ready && rs_ROB_id == Qj) ? 0: is_Qj;
 
-wire [31:0] Q_i = (lsb_ready && lsb_rob_id == Qi) ? lsb_val : (rs_ready && rs_ROB_id == Qi) ? rs_val: ins_rs1;
-wire [31:0] Q_j = (lsb_ready && lsb_rob_id == Qj) ? lsb_val : (rs_ready && rs_ROB_id == Qj) ? rs_val: ins_rs2;
+// sb!!!! not Qi then shouldn't update
+wire [31:0] Q_i = is_Qi ? ((lsb_ready && lsb_rob_id == Qi) ? lsb_val : (rs_ready && rs_ROB_id == Qi) ? rs_val: ins_rs1) : ins_rs1;
+wire [31:0] Q_j = is_Qj ? ((lsb_ready && lsb_rob_id == Qj) ? lsb_val : (rs_ready && rs_ROB_id == Qj) ? rs_val: ins_rs2) : ins_rs2;
 
-integer i;
+wire [31 : 0] rs1_val = rs1[ready_del], rs2_val = rs2[ready_del], imm_val = Imm[ready_del];
+
+integer i, file;
 
 always @(posedge clk_in) begin
   if (rst_in || clear_flag) begin
+    alu_op <= 0;
+    Vi <= 0;
+    Vj <= 0;
+    imm <= 0;
+    pc <= 0;
+    rd <= 0;
+    Itype <= 0;
     for (i = 0; i < RS_SIZE; i = i + 1) begin
       valid[i] <= 0;
       Type[i] <= 0;
@@ -98,8 +111,9 @@ always @(posedge clk_in) begin
       _is_Qj[i] <= 0;
       _Qi[i] <= 0;
       _Qj[i] <= 0;
+      _Itype[i] <= 0;
     end
-  end else if(rdy_in) begin
+  end else if(~rdy_in) begin end begin
     if (ready_add < RS_SIZE && inst_valid) begin
       valid[ready_add] <= 1;
       Type[ready_add] <= ins_Type;
@@ -112,10 +126,13 @@ always @(posedge clk_in) begin
       Imm[ready_add] <= Imm_in;
       Rd[ready_add] <= ROB_id;
       Pc[ready_add] <= Pc_in;
+      _Itype[ready_add] <= ins_Itype;
       // check 328
-      // begin
-      //   $display("pc=%h type=%h imm=%d", Pc_in, ins_Type, Imm_in); 
-      // end
+      file = $fopen("debug.txt","a");
+      begin
+        $fdisplay(file, "add[%d]:pc=%h type=%h Qi=%b:%d,Qj=%b:%d,imm=%d",ready_add, Pc_in, ins_Type, _is_Qi_,Q_i,_is_Qj_,Q_j, Imm_in); 
+      end
+      $fclose(file);
 
     end
     if (rs_ready) begin // result ok
@@ -150,12 +167,16 @@ always @(posedge clk_in) begin
     // execute.
     if(ready_del < RS_SIZE) begin
       alu_op <= Type[ready_del];
-      Vi <= rs1[ready_del];
-      Vj <= rs2[ready_del];
-      imm <= Imm[ready_del];
+      Vi <= rs1_val;
+      Vj <= rs2_val;
+      imm <= imm_val;
       pc <= Pc[ready_del];
       rd <= Rd[ready_del];
       valid[ready_del] <= 0;
+      Itype <= _Itype[ready_del];
+      file = $fopen("rs_cor.txt","a");
+      $fdisplay(file,"del[%d]:pc=%h type=%h rs1=%d,rs2=%d,imm=%d",ready_del, Pc[ready_del], Type[ready_del], rs1_val,rs2_val,imm_val);
+      $fclose(file);
     end else begin
       alu_op <= 0;
       Vi <= 0;
@@ -163,6 +184,7 @@ always @(posedge clk_in) begin
       imm <= 0;
       pc <= 0;
       rd <= 0;
+      Itype <= 0;
     end
   end
 end

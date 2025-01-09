@@ -59,13 +59,15 @@ module ReorderBuffer #(
         output wire rob_head_l_or_s,
         output wire [4:0] rob_head,
         output wire [31:0] commit_tim,
-        output reg real_commit
+        output reg real_commit,
+
+        output wire [31 : 0] rd_head_addr
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
     reg [31 : 0] commit_times;
 
     assign commit_tim = commit_times;
-
+    assign rd_head_addr = insAddr[head];
     reg ready[0 : ROB_SIZE - 1];
     reg busy[0 : ROB_SIZE - 1];
 
@@ -108,12 +110,9 @@ module ReorderBuffer #(
             if(rs_is_set) begin
                 ready[rs_set_id] <= 1;
                 value[rs_set_id] <= rs_set_val;
-                // if(commit_times > 6245) begin
-                //     $display("commit %d head: %d tail: %d", commit_times, head, tail);
-                //     for(i = head; i < tail; i = i + 1) begin
-                //         $display("[%d]: pc=%d", i, insAddr[i]);
-                //     end
-                // end
+                if(commit_times <= 50) begin
+                    $display("commit %d, rob[%h:%d]:%d", commit_times, insAddr[rs_set_id], rs_set_id, rs_set_val);
+                end
             end 
             if(lsb_is_set) begin
                 ready[lsb_set_id] <= 1;
@@ -139,16 +138,16 @@ module ReorderBuffer #(
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
                 real_commit <= 1'b1;
-                // if(commit_times % 10 == 0)
+                  if(commit_times % 10000 == 0) begin
                     $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
-                // begin
-                //     file = $fopen("debug.txt","a");
-                //     $fwrite(file, "commit_%d id = [%d]: addr = [%h]\n", 
-                //     commit_times, head, insAddr[head]);
-                //     $fclose(file);
-                //     // $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
-                //     // $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
-                // end
+                
+                    file = $fopen("rob_debug.txt","a");
+                    $fwrite(file, "commit%d: addr[%h] val[%d]\n", 
+                    commit_times, insAddr[head], value[head]);
+                    $fclose(file);
+                    // $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
+                    // $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
+                end
                 // output 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
@@ -159,7 +158,12 @@ module ReorderBuffer #(
                     end
                 end     
             end
-            // if(commit_times >= 521) 
+            // if(commit_times >= 814 && commit_times < 816) begin
+            //     $display("commit %d head: %d tail: %d", commit_times, head, tail);
+            //     for(i = head; i < tail; i = i + 1) begin
+            //         $display("[%d]: pc=%d", i, insAddr[i]);
+            //     end
+            // end
         end
     end
     // original full or newly add full
