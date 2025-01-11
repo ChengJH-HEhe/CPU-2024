@@ -43,10 +43,6 @@ module ALU
         end
         `SUB: begin
           res <= Vi - Vj;
-          file = $fopen("tmp.txt","a");
-                    $fwrite(file, "addr[%h] %d-%d=%d\n", 
-                    pc, Vi,Vj,Vi-Vj);
-                    $fclose(file);
         end
         `AND: begin
           res <= Vi & Vj;

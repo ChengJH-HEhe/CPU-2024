@@ -89,6 +89,7 @@ module ReorderBuffer #(
         real_commit <= 0;
         if (rst_in || (clear_flag && rdy_in)) begin
             clear_flag <= 0;
+            
             if(rst_in) begin
                 commit_times <= 0;
             end
@@ -138,16 +139,15 @@ module ReorderBuffer #(
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
                 real_commit <= 1'b1;
-                  if(commit_times % 10000 == 0) begin
-                    $display("commit %d head: %d tail: %d, pc : %d", commit_times, head, tail, insAddr[head]);
-                
-                    file = $fopen("rob_debug.txt","a");
-                    $fwrite(file, "commit%d: addr[%h] val[%d]\n", 
-                    commit_times, insAddr[head], value[head]);
-                    $fclose(file);
+                  if(commit_times > 1000 && commit_times % 1000 == 0) begin
+                    $display("commit %d, pc : %h", commit_times, insAddr[head]);
+                  end
+                    // file = $fopen("rob_c_debug.txt","a");
+                    // $fwrite(file, "commit%d: addr[%h] val[%d]\n", 
+                    // commit_times, insAddr[head], value[head]);
+                    // $fclose(file);
                     // $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
                     // $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
-                end
                 // output 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
@@ -158,12 +158,6 @@ module ReorderBuffer #(
                     end
                 end     
             end
-            // if(commit_times >= 814 && commit_times < 816) begin
-            //     $display("commit %d head: %d tail: %d", commit_times, head, tail);
-            //     for(i = head; i < tail; i = i + 1) begin
-            //         $display("[%d]: pc=%d", i, insAddr[i]);
-            //     end
-            // end
         end
     end
     // original full or newly add full
@@ -197,5 +191,5 @@ module ReorderBuffer #(
     assign rs2_ready = ready[rs2_id] || (rs_is_set && rs2_id == rs_set_id) || (lsb_is_set_val && rs2_id == lsb_set_id) || (inst_valid && inst_ready && rs2_id == tail);
     assign rs2_val = ready[rs2_id]? value[rs2_id] : 
                     rs_is_set && rs2_id == rs_set_id ? rs_set_val : 
-                    lsb_is_set && rs2_id == lsb_set_id ? lsb_set_val : ins_value;
+                    lsb_is_set_val && rs2_id == lsb_set_id ? lsb_set_val : ins_value;
 endmodule

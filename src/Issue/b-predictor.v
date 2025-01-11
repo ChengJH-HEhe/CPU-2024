@@ -34,11 +34,11 @@ always @(posedge clk_in) begin
     if(ROB_valid) 
       begin
         if(ins_pc[0]) begin
-          if(state[ins_pc[8:2]] != 2'b11)
-            state[ins_pc[8:2]] <=   state[ins_pc[8:2]] + 1;
+          if(state[ins_pc[8:1]] != 2'b11)
+            state[ins_pc[8:1]] <=   state[ins_pc[8:1]] + 1;
         end else begin
-          if(state[ins_pc[8:2]] != 2'b00)
-            state[ins_pc[8:2]] <=   state[ins_pc[8:2]] - 1;
+          if(state[ins_pc[8:1]] != 2'b00)
+            state[ins_pc[8:1]] <=   state[ins_pc[8:1]] - 1;
         end
     end
   end

@@ -149,13 +149,13 @@ always @(posedge clk_in) begin
             op <= Type[head];
             ticker <= (Type[head][3])? 2'b10 : 2'b01;
             lsb_ROB_id <= rd_head;
-            file = $fopen("lsb_debug.txt","a");
-            if(Type[head][3]) begin
-              $fwrite(file,"store[%d]: addr=%d, data=%d\n", lsb_commit_times, addr_head, value2[head]);
-            end else begin
-              $fwrite(file, "load[%d]: addr=%d\n",lsb_commit_times, addr_head);
-            end
-            $fclose(file);
+            // file = $fopen("lsb_c_debug.txt","a");
+            // if(Type[head][3]) begin
+            //   $fwrite(file,"store[%d]: addr=%d, data=%d\n", lsb_commit_times, addr_head, value2[head]);
+            // end else begin
+            //   $fwrite(file, "load[%d]: addr=%d\n",lsb_commit_times, addr_head);
+            // end
+            // $fclose(file);
             
         end
       end
@@ -203,10 +203,10 @@ always @(posedge clk_in) begin
       lsb_Qi[tail] <= Qi;
       lsb_Qj[tail] <= Qj;
       lsb_imm[tail] <= {{20{imm[11]}}, imm[11:0]};
-      file = $fopen("lsb_debug.txt","a");
-       $fdisplay(file, "commit=%d [%b:%d]%d [%b:%d]%d imm=%d RD=%d", lsb_commit_times,is_Qi_,Qi, Vi_,
-        is_Qj_,Qj, Vj_, imm, ins_rd);
-      $fclose(file);
+      // file = $fopen("lsb_debug.txt","a");
+      //  $fdisplay(file, "commit=%d [%b:%d]%d [%b:%d]%d imm=%d RD=%d", lsb_commit_times,is_Qi_,Qi, Vi_,
+      //   is_Qj_,Qj, Vj_, imm, ins_rd);
+      // $fclose(file);
     end
     // delete dependency
     if (rs_ready) begin // result ok

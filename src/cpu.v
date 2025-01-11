@@ -172,7 +172,7 @@ LSB lsb(
 
 MemCtrl memCtrl (
   .clk_in(clk_in),
-  .rst_in(rst_in),
+  .rst_in(rst_in || clear_flag_rob_public),
   .rdy_in(rdy_in),
   .ram_type(mem_wr),
   .addr_ram(mem_a),
