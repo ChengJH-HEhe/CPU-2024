@@ -111,9 +111,9 @@ module ReorderBuffer #(
             if(rs_is_set) begin
                 ready[rs_set_id] <= 1;
                 value[rs_set_id] <= rs_set_val;
-                if(commit_times <= 50) begin
-                    $display("commit %d, rob[%h:%d]:%d", commit_times, insAddr[rs_set_id], rs_set_id, rs_set_val);
-                end
+                // if(commit_times <= 50) begin
+                //     $display("commit %d, rob[%h:%d]:%d", commit_times, insAddr[rs_set_id], rs_set_id, rs_set_val);
+                // end
             end 
             if(lsb_is_set) begin
                 ready[lsb_set_id] <= 1;
@@ -139,9 +139,9 @@ module ReorderBuffer #(
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
                 real_commit <= 1'b1;
-                  if(commit_times > 1000 && commit_times % 1000 == 0) begin
-                    $display("commit %d, pc : %h", commit_times, insAddr[head]);
-                  end
+                //   if(commit_times > 1000 && commit_times % 1000 == 0) begin
+                //     $display("commit %d, pc : %h", commit_times, insAddr[head]);
+                //   end
                     // file = $fopen("rob_c_debug.txt","a");
                     // $fwrite(file, "commit%d: addr[%h] val[%d]\n", 
                     // commit_times, insAddr[head], value[head]);
