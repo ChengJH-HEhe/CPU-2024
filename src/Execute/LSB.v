@@ -45,8 +45,7 @@ module LSB #(
   output reg [4 : 0] lsb_ROB_id,
   output reg [31 : 0] lsb_val,
   output wire lsb_full,
-  input wire [31 : 0] lsb_commit_times,
-  input wire [31 : 0] rd_head_addr
+  input wire [31 : 0] lsb_commit_times
 );
 localparam LSB_SIZE = 1 << LSB_SIZE_BIT;
 reg [LSB_SIZE_BIT - 1 : 0] head, tail;
