@@ -139,7 +139,7 @@ module ReorderBuffer #(
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
                 real_commit <= 1'b1;
-                //   if(commit_times > 1000 && commit_times % 1000 == 0) begin
+                //   if(commit_times % 3000 == 0) begin
                 //     $display("commit %d, pc : %h", commit_times, insAddr[head]);
                 //   end
                     // file = $fopen("rob_c_debug.txt","a");

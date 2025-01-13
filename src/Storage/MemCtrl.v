@@ -67,7 +67,7 @@ always @(posedge clk_in) begin
         lsb_val_ready <= 1'b0;
         state <= 3'b000;
         if(lsb_need) begin
-          if(~io_buffer_full || addr != 196608 && addr != 196612)
+          if(~io_buffer_full)
           begin
             // load store prior.
             // load 1, store 2
@@ -80,6 +80,11 @@ always @(posedge clk_in) begin
             endcase
             addr_ram <= addr;
             data_ram <= op[3] ? data[7:0] : 8'b0;
+          end else begin
+            status <= 0;
+            addr_ram <= 0;
+            data_ram <= 0;
+            ram_type <= 0;
           end
         end else if(iCache_need) begin
           status <= 3'b011; // FETCH
@@ -143,7 +148,7 @@ always @(posedge clk_in) begin
         // store
         ram_type <= 1'b1;
         if(state + 1 != total) begin 
-          if(~io_buffer_full || addr_ram != 196608 && addr_ram != 196612) begin
+          begin
             state <= state + 1;
             addr_ram <= addr_ram + 1;  
             case(state)

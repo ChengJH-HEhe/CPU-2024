@@ -128,11 +128,11 @@ always @(posedge clk_in) begin
       Pc[ready_add] <= Pc_in;
       _Itype[ready_add] <= ins_Itype;
       // check 328
-      // file = $fopen("debug.txt","a");
-      // begin
-      //   $fdisplay(file, "add[%d]:pc=%h type=%h Qi=%b:%d,Qj=%b:%d,imm=%d",ready_add, Pc_in, ins_Type, _is_Qi_,Q_i,_is_Qj_,Q_j, Imm_in); 
-      // end
-      // $fclose(file);
+      file = $fopen("rs.txt","a");
+      begin
+        $fdisplay(file, "add[%d]:pc=%h type=%h Qi=%b:%d,Qj=%b:%d,imm=%d",ready_add, Pc_in, ins_Type, _is_Qi_,Q_i,_is_Qj_,Q_j, Imm_in); 
+      end
+      $fclose(file);
 
     end
     if (rs_ready) begin // result ok
@@ -174,9 +174,9 @@ always @(posedge clk_in) begin
       rd <= Rd[ready_del];
       valid[ready_del] <= 0;
       Itype <= _Itype[ready_del];
-      // file = $fopen("rs_cor.txt","a");
-      // $fdisplay(file,"del[%d]:pc=%h type=%h rs1=%d,rs2=%d,imm=%d",ready_del, Pc[ready_del], Type[ready_del], rs1_val,rs2_val,imm_val);
-      // $fclose(file);
+      file = $fopen("rs.txt","a");
+      $fdisplay(file,"del[%d]:pc=%h type=%h rs1=%d,rs2=%d,imm=%d",ready_del, Pc[ready_del], Type[ready_del], rs1_val,rs2_val,imm_val);
+      $fclose(file);
     end else begin
       alu_op <= 0;
       Vi <= 0;

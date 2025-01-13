@@ -139,7 +139,7 @@ always @(posedge clk_in) begin
         //   $fclose(file);
         // end
         if (not_dep && ((rob_head_l_or_s && commit_id == rd_head) 
-        || (~Type[head][3] && addr_head != 196608 && addr_head != 196612) )) begin
+        || (~Type[head][3] && addr_head[17:16] != 2'b11) )) begin
             full_mem <= 1; // to mem is full.
             head <= head + 1;
             addr <= addr_head;
