@@ -235,7 +235,12 @@ always @(posedge clk_in) begin
       // decode try to map opcode, next circle issue? no! one-circle.
       // if ins_ready, decode ins
       IFetcher_clear <= 0;
-      if(_change && _work) begin
+      if(!(_change && _work)) begin
+        ROB_inst_valid <= 1'b0;
+        RS_inst_valid <= 1'b0;
+        LSB_ins_valid <= 1'b0;
+        IFetcher_clear <= 1'b0;
+      end else begin
         // ROB/LSB/RS_INS_TYPE
         case(opcode) 
           RISC_L: ROB_ins_Type <= `TypeLd;
@@ -245,7 +250,7 @@ always @(posedge clk_in) begin
             ROB_ins_Type <= `TypeRd;
         endcase
 
-        last_addr <= ROB_ins_Addr;
+        last_addr <= real_ifetcher_pc;
 
         ROB_inst_valid <= 1'b1;
         RS_inst_valid <= _rs;
@@ -338,7 +343,7 @@ always @(posedge clk_in) begin
         opcode == RISC_I ? 
           (is_Itype ? ((funct3 == 3'b001 || funct3 == 3'b101)? immI_star : immI) 
             : (((ins[1:0] == 2'b01 && ins[15:13] == 3'b100) || (ins[1:0] == 2'b10 && ins[15:13] == 3'b000)) ? immI_star : immI))
-         : opcode == RISC_B? immB :  32'b0;
+         : opcode == RISC_B? immB :  immU;
         lsb_imm <= (is_Itype && opcode == RISC_L) ? immI 
           : immS;
 
@@ -378,11 +383,7 @@ always @(posedge clk_in) begin
             ROB_ins_jpAddr <= predict_nxt_pc;
           end
         endcase
-      end else begin
-        ROB_inst_valid <= 1'b0;
-        RS_inst_valid <= 1'b0;
-        LSB_ins_valid <= 1'b0;
-      end
+      end 
     end 
   end
 end

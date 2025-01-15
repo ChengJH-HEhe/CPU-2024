@@ -7,7 +7,7 @@ module ALU
      // reset signal
      input wire rdy_in,
      // ready signal, pause cpu when low
-     input wire [6 : 0] alu_op,
+     input wire [5 : 0] alu_op,
      input wire [31 : 0] Vi,
      input wire [31 : 0] Vj,
      input wire [31 : 0] imm,
@@ -116,6 +116,9 @@ module ALU
         end
         `BGEU: begin
           res <= pc + ((Vi >= Vj) ? imm_rd + 1 : 4);
+        end
+        `LUI: begin
+          res <= imm_rd;
         end
         default: begin
           res <= 0;

@@ -27,7 +27,7 @@ module RS #(
 
   
   // to ALU
-  output reg [6 : 0] alu_op ,
+  output reg [5 : 0] alu_op ,
   output reg [31 : 0] Vi ,
   output reg [31 : 0] Vj ,
   output reg [31 : 0] imm,
@@ -75,10 +75,14 @@ generate
     assign exec[gen_i] = valid[gen_i] && !_is_Qi[gen_i] && !_is_Qj[gen_i];
   end 
 endgenerate
+reg [RS_SIZE_BIT : 0] size;
 
 assign ready_del = exec[0] == 1 ? 0 : exec[1] == 1 ? 1 : exec[2] == 1 ? 2 : exec[3] == 1 ? 3 : exec[4] == 1 ? 4 : exec[5] == 1 ? 5 : exec[6] == 1 ? 6 : exec[7] == 1 ? 7 : 8;
-assign ready_add = valid[0] == 0 ? 0 : valid[1] == 0 ? 1 : valid[2] == 0 ? 2 : valid[3] == 0 ? 3 : valid[4] == 0 ? 4 : valid[5] == 0 ? 5 : valid[6] == 0 ? 6 : valid[7] == 0 ? 7 : 8;
-assign full = ready_add == RS_SIZE;
+assign ready_add = (ready_del == RS_SIZE) ? (valid[0] == 0 ? 0 : valid[1] == 0 ? 1 : valid[2] == 0 ? 2 : valid[3] == 0 ? 3 : valid[4] == 0 ? 4 : valid[5] == 0 ? 5 : valid[6] == 0 ? 6 : valid[7] == 0 ? 7 : 8)
+  : ready_del;
+
+wire [RS_SIZE_BIT : 0] next_size = size + (inst_valid && ready_add < RS_SIZE) - (ready_del < RS_SIZE);
+assign full = next_size == RS_SIZE;
 
 wire _is_Qi_ = (lsb_ready && lsb_rob_id == Qi) ? 0 : (rs_ready && rs_ROB_id == Qi) ? 0: is_Qi;
 wire _is_Qj_ = (lsb_ready && lsb_rob_id == Qj) ? 0 : (rs_ready && rs_ROB_id == Qj) ? 0: is_Qj;
@@ -100,6 +104,7 @@ always @(posedge clk_in) begin
     pc <= 0;
     rd <= 0;
     Itype <= 0;
+    size <= 0;
     for (i = 0; i < RS_SIZE; i = i + 1) begin
       valid[i] <= 0;
       Type[i] <= 0;
@@ -114,6 +119,29 @@ always @(posedge clk_in) begin
       _Itype[i] <= 0;
     end
   end else if(~rdy_in) begin end else begin
+    // execute.
+    size <= next_size;
+    if(ready_del < RS_SIZE) begin
+      alu_op <= Type[ready_del];
+      Vi <= rs1_val;
+      Vj <= rs2_val;
+      imm <= imm_val;
+      pc <= Pc[ready_del];
+      rd <= Rd[ready_del];
+      valid[ready_del] <= 0;
+      Itype <= _Itype[ready_del];
+      // file = $fopen("rs.txt","a");
+      // $fdisplay(file,"del[%d]:pc=%h type=%h rs1=%d,rs2=%d,imm=%d",ready_del, Pc[ready_del], Type[ready_del], rs1_val,rs2_val,imm_val);
+      // $fclose(file);
+    end else begin
+      alu_op <= 0;
+      Vi <= 0;
+      Vj <= 0;
+      imm <= 0;
+      pc <= 0;
+      rd <= 0;
+      Itype <= 0;
+    end
     if (ready_add < RS_SIZE && inst_valid) begin
       valid[ready_add] <= 1;
       Type[ready_add] <= ins_Type;
@@ -128,12 +156,11 @@ always @(posedge clk_in) begin
       Pc[ready_add] <= Pc_in;
       _Itype[ready_add] <= ins_Itype;
       // check 328
-      file = $fopen("rs.txt","a");
-      begin
-        $fdisplay(file, "add[%d]:pc=%h type=%h Qi=%b:%d,Qj=%b:%d,imm=%d",ready_add, Pc_in, ins_Type, _is_Qi_,Q_i,_is_Qj_,Q_j, Imm_in); 
-      end
-      $fclose(file);
-
+      // file = $fopen("rs.txt","a");
+      // begin
+      //   $fdisplay(file, "add[%d]:pc=%h type=%h Qi=%b:%d,Qj=%b:%d,imm=%d",ready_add, Pc_in, ins_Type, _is_Qi_,Q_i,_is_Qj_,Q_j, Imm_in); 
+      // end
+      // $fclose(file);
     end
     if (rs_ready) begin // result ok
       // delete correspondant dependency
@@ -163,28 +190,6 @@ always @(posedge clk_in) begin
           _is_Qj[i] <= 0;
         end
       end
-    end
-    // execute.
-    if(ready_del < RS_SIZE) begin
-      alu_op <= Type[ready_del];
-      Vi <= rs1_val;
-      Vj <= rs2_val;
-      imm <= imm_val;
-      pc <= Pc[ready_del];
-      rd <= Rd[ready_del];
-      valid[ready_del] <= 0;
-      Itype <= _Itype[ready_del];
-      file = $fopen("rs.txt","a");
-      $fdisplay(file,"del[%d]:pc=%h type=%h rs1=%d,rs2=%d,imm=%d",ready_del, Pc[ready_del], Type[ready_del], rs1_val,rs2_val,imm_val);
-      $fclose(file);
-    end else begin
-      alu_op <= 0;
-      Vi <= 0;
-      Vj <= 0;
-      imm <= 0;
-      pc <= 0;
-      rd <= 0;
-      Itype <= 0;
     end
   end
 end

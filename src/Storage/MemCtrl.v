@@ -96,6 +96,7 @@ always @(posedge clk_in) begin
         end else begin
           status <= 3'b0;
           total <= 3'b0;
+          state <= 3'b0;
           addr_ram <= 32'b0;
           data_ram <= 8'b0;
           ram_type <= 1'b0;

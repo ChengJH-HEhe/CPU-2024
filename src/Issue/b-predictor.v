@@ -19,7 +19,7 @@ module Bpredictor (
   localparam RISC_B = 7'b1100011;
   reg [1:0] state[255:0];
 
-wire predict_jump = ((Itype && input_ins[6:0] == RISC_B) || (!Itype && input_ins[15:14] == 2'b11 && input_ins[1:0] == 2'b01))? state[input_pc[8:2]] : 1'b0;
+wire predict_jump = ((Itype && input_ins[6:0] == RISC_B) || (!Itype && input_ins[15:14] == 2'b11 && input_ins[1:0] == 2'b01))? state[input_pc[8:1]][1] : 1'b0;
 wire [31:0] immB = Itype ? {{20{input_ins[31]}}, input_ins[7], input_ins[30:25], input_ins[11:8], 1'b1}
                   : {{25{input_ins[12]}}, input_ins[6:5],input_ins[2],input_ins[11:10],input_ins[4:3],1'b1};
 assign predict_pc = predict_jump? (input_pc + immB) : (input_pc + (Itype?32'h4:32'h2));

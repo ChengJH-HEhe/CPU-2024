@@ -14,9 +14,13 @@ module cpu(
   output wire                 mem_wr,			// write/read signal (1 for write)
 	
 	input  wire                 io_buffer_full, // 1 if uart buffer is full
-	
+  
+
+  output wire [15:0] debug_info,
 	output wire [31:0]			dbgreg_dout		// cpu register output (debugging demo)
 );
+
+assign debug_info = pc_decoder_ifetcher[15:0];
 
 // implementation goes here
 
@@ -87,7 +91,7 @@ wire [4 : 0] qi_rs_decoder, qj_rs_decoder, rob_id_rs_decoder;
 
 // rs<>alu
 
-wire [6:0] alu_op_alu_rs;
+wire [5:0] alu_op_alu_rs;
 wire [31:0] vi_alu_rs, vj_alu_rs, imm_alu_rs;
 wire [4:0] rd_alu_rs;
 wire [31:0] pc_alu_rs;
@@ -288,6 +292,8 @@ ALU alu(
   .res(rs_val_public)
 );
 
+wire rob_br_commit;
+wire [31:0] rob_br_real_pc;
 ReorderBuffer rob(
   .real_commit(real_com),
   .clk_in(clk_in),
@@ -329,8 +335,10 @@ ReorderBuffer rob(
   .rs1_ready(rs1_rdy_rob_regf),
   .rs1_val(rs1_val_rob_regf),
   .rs2_ready(rs2_rdy_rob_regf),
-  .rs2_val(rs2_val_rob_regf)
+  .rs2_val(rs2_val_rob_regf),
 
+  .br_commit(rob_br_commit),
+  .br_real_pc(rob_br_real_pc)
 );
 
 // outports wire
@@ -371,8 +379,8 @@ Bpredictor bpredictor(
   .input_pc(branch_pc_bp_ifetcher),
   .Itype(Itype_br_if),
   .predict_pc(predict_pc_ifetcher_bp),
-  .ROB_valid(rdy_commit_public),
-  .ins_pc(pc_fact_rob_public)
+  .ROB_valid(rob_br_commit),
+  .ins_pc(rob_br_real_pc)
 );
 
 Decoder decoder(

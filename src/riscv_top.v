@@ -1,5 +1,6 @@
 // riscv top module file
 // modification allowed for debugging purposes
+
 module riscv_top #(
     parameter SIM = 0  // whether in simulation
 ) (
@@ -7,10 +8,10 @@ module riscv_top #(
     input  wire btnC,
     output wire Tx,
     input  wire Rx,
-    output wire led,
-    output wire [15:1] led1
+    output wire [15:0] led
 );
-
+  wire [15: 0] led_debug;
+  assign led[14:0] = led_debug;
   localparam SYS_CLK_FREQ = 100000000;
   localparam UART_BAUD_RATE = 115200;
   localparam RAM_ADDR_WIDTH = 17;  // 128KiB ram, should not be modified
@@ -76,6 +77,7 @@ module riscv_top #(
       .mem_a         (cpu_mem_a),
       .mem_wr        (cpu_mem_wr),
       .io_buffer_full(cpu_io_buffer_full),
+      .debug_info(led_debug),
       .dbgreg_dout(cpu_dbgreg_dout)
   );
 
@@ -122,6 +124,8 @@ module riscv_top #(
   // hci is always disabled in simulation
   wire hci_active = hci_active_out & ~SIM;
 
+  
+
   // For RAM
   // ram will have two ways to access: from cpu or hci
   assign bus_mem_addr = hci_active ? hci_ram_a : cpu_mem_a;
@@ -156,6 +160,6 @@ module riscv_top #(
   //
 
   // indicates debug break
-  assign led = hci_active;
+  assign led[15] = hci_active;
 
 endmodule

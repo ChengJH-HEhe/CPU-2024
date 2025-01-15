@@ -78,9 +78,9 @@ module RegFile (
     end else begin
       // if(real_commit)
       // begin
-      //   file = $fopen("rob_c_debug.txt","a");
+      //   file = $fopen("rob_debug.txt","a");
       //   for(i = 10; i < 20; i = i + 1) begin
-      //       $fdisplay(file, "%d", regs[i]);
+      //       $fwrite(file, "%d", regs[i]);
       //   end
       //   $fwrite(file, "\n");
       //   $fclose(file);

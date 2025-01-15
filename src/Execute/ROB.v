@@ -60,14 +60,15 @@ module ReorderBuffer #(
         output wire [4:0] rob_head,
         output wire [31:0] commit_tim,
         output reg real_commit,
-
-        output wire [31 : 0] rd_head_addr
+        
+        output wire br_commit,
+        output wire [31:0] br_real_pc
     );
     localparam ROB_SIZE = 1 << ROB_SIZE_BIT;
     reg [31 : 0] commit_times;
 
     assign commit_tim = commit_times;
-    assign rd_head_addr = insAddr[head];
+    // assign rd_head_addr = insAddr[head];
     reg ready[0 : ROB_SIZE - 1];
     reg busy[0 : ROB_SIZE - 1];
 
@@ -79,9 +80,9 @@ module ReorderBuffer #(
 
     reg [`ROB_WIDTH_BIT - 1 : 0] head, tail;
 
-    
-
     assign rob_head = head;
+    assign br_commit = rdy_in && busy[head] && ready[head] && insType[head] == `TypeBr;
+    assign br_real_pc = {insAddr[head][31:1], value[head][0]};
 
     integer i, file;
 
@@ -139,15 +140,11 @@ module ReorderBuffer #(
                 // TODO commit head TypeBr
                 commit_times <= commit_times + 1;
                 real_commit <= 1'b1;
-                //   if(commit_times % 3000 == 0) begin
-                //     $display("commit %d, pc : %h", commit_times, insAddr[head]);
+                //   if(commit_times % 1000 == 0) begin
+                //     file = $fopen("rob_debug.txt","a");
+                //     $fdisplay(file, "commit %d, pc : %h", commit_times, insAddr[head], value[head]);
+                //     $fclose(file);
                 //   end
-                    // file = $fopen("rob_c_debug.txt","a");
-                    // $fwrite(file, "commit%d: addr[%h] val[%d]\n", 
-                    // commit_times, insAddr[head], value[head]);
-                    // $fclose(file);
-                    // $display("commit_times %d head: %d tail: %d", commit_times, head, tail);
-                    // $display("[%d]: pc=%d ready:%b", head, insAddr[head],ready[head]);
                 // output 
                 if (insType[head] == `TypeBr) begin
                     // Br predict fail.
